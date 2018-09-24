@@ -3,6 +3,6 @@ struct MsgPigeon
 	long mType; // required for queue
 	char message[50]; // maybe an int instead?
 	
-	int getSize() { return sizeof(this) - sizeof(long); }
+	int getSize() { return sizeof(MsgPigeon) - sizeof(long); }
 };
 
