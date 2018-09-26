@@ -3,9 +3,11 @@
 #include "PTools.cpp"
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 const char* ftok_path = ".";
-const int ftok_id = 'w';
+const int ftok_id = 'u';
 
 using namespace std;
 
@@ -52,7 +54,9 @@ bool Receiver::getEvent(long mTypeIn)
 {
 	cout << "getEvent" << endl;
 	
-	if (msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 0) != -1)
+	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
+	
+	if (msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 1) != -1)
 	{
 		cout << "Message found!" << endl;
 		cout << "msgr.message = " << msgr.message << endl;
@@ -73,14 +77,35 @@ bool Receiver::terminate()
 
 int main()
 {
-	Receiver receiver(msgget(ftok(ftok_path,ftok_id),IPC_EXCL|IPC_CREAT|0600));
+	char checkQueue;
+	Receiver receiver(msgget(ftok(ftok_path,ftok_id),IPC_CREAT|0600)); // Removed IPC_EXCL since Q must be shared
+	
+	//cout << "getpid() =" << getpid() << endl; // does not work!
 		
 	while (true)
 	{
+		if (receiver.id == 1)
+		{
+			receiver.getEvent(997);
+		}
+		
+		else if (receiver.id == 2)
+		{
+			receiver.getEvent(997); // should go before if statement since both receive
+		}
 		cout << "receiver.qid = " << receiver.qid << endl;
-		cin.get();
-		receiver.getEvent(100);
+		
+		cout << "Do you want to check queue again? (y/n): ";
+		cin >> checkQueue;
+		
+		if (checkQueue != 'y' & checkQueue != 'Y')
+		{
+			break;
+		}
+
 	}
+	
+	msgctl(receiver.qid, IPC_RMID, NULL);
 	
 	return 0;
 }
