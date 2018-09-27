@@ -77,6 +77,9 @@ void Sender::sendEvent(long mTypeIn)
 	
 	msgr.mType = mTypeIn;
 	msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
+	
+	strcpy(msgr.message, "");
+	msgr.mType = 0;
 }
 
 bool Sender::terminate() // mType will be 122 for termination calls
@@ -114,6 +117,25 @@ bool Sender::processNumber() // modular event will be 118
 	return false;
 }
 
+bool tempConfirmContinue(Sender sendIn)
+{
+	cout << "tempConfirmContinue" << endl;
+	
+	char checkQueue; // used to control loop temporarily.
+
+	cout << "qid = " << sendIn.qid << endl;
+	
+	cout << "Do you want to send to queue again? (y/n): ";
+	cin >> checkQueue;
+	
+	if (checkQueue != 'y' & checkQueue != 'Y')
+	{
+		return false;
+	}
+	
+	return true;
+}
+
 int main()
 {
 	Sender sender(msgget(ftok(ftok_path,ftok_id),0));	 // qid = 0
@@ -122,18 +144,20 @@ int main()
 
 	while (true)
 	{
-		if (sender.qid != -1)
+		if (sender.qid == -1)
 		{
 			sender.qid = msgget(ftok(ftok_path,ftok_id),0);
 			cout << "sender.qid = " << sender.qid << endl;
 			//sender.sendEvent(118);
-			//cin.get();
-			break;			
+			//cin.get();			
 		}
 		else
 		{
+			cin.get();
 			cout << "sender.qid = " << sender.qid << endl;
-
+			cout << sender.marker << " found the queue! Now ready! " << endl;
+			cout << "qid = " << sender.qid << endl;
+			break;
 		}
 	}
 	
@@ -141,6 +165,11 @@ int main()
 	{
 		sender.generateRandomNumber();	
 		sender.processNumber();	
+	
+		if (sender.marker == 251)
+		{
+			sender.sendEvent(251);
+		}
 	
 		if (sender.marker == 997)
 		{
@@ -152,12 +181,11 @@ int main()
 			sender.sendEvent(997);
 		}
 		
-		cin.get();
+		if (!tempConfirmContinue(sender))
+		{
+			break;
+		}
 	}
-	
-	cout << sender.marker << " found the queue! Now ready! " << endl;
-	
-	cout << "qid = " << sender.qid << endl;
 	
 	cin.get();
 	
