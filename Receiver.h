@@ -14,6 +14,7 @@ class Receiver
 	int assignReceiverNumber();	// displays prompt for user to select from ids.
 	int getReceiverNumber();	// prompts user to enter choice of ids.
 	bool getEvent(long);
+	bool sendEvent(long);
 	bool terminate(); // clean up values from queue.
+	void cleanUpQueue();	// removes messages with mtypes for which receiver is responsible.
 };
-
