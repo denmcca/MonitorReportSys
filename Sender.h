@@ -20,4 +20,3 @@ class Sender
 	bool processNumber();	// Checks if previous event is modular to marker.
 };
 
-
