@@ -9,6 +9,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/*
+	Using as test stub for testing with Receiver program. - Dennis 
+*/
+
 using namespace std;
 
 const char* ftok_path = ".";
@@ -69,11 +73,8 @@ void Sender::sendEvent(long mTypeIn) // mTypeIn incase need to send other than m
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
-	//strcpy(msgr.message, "Sender " + std::to_string(marker) + " sent: " + std::to_string());
-	
 	cout << "msgr.message = " << msgr.message << endl;
 	
-	//cout << "(struct msgbuf*)&msgr->message =" << (struct msgbuf*)&msgr->message << endl;
 	cout << "msgr.getSize() = " << msgr.getSize() << endl;
 	
 	if (msgr.message == "Terminating")
@@ -167,73 +168,91 @@ bool tempConfirmContinue(Sender sendIn)
 
 int main()
 {
-	Sender sender(msgget(ftok(ftok_path,ftok_id),0));
-		
-	//cout << "getpid() =" << getpid() << endl; // does not work!
+	Sender sender(msgget(ftok(ftok_path,ftok_id),0));	
 	
-	int test_counter = 0;
-
-
-	while (true)
-	{
-		if (sender.qid == -1)
+	/* Testing 251 mType
+	sender.msgr.mType = 251;
+	strcpy(sender.msgr.message, "TESTING");
+	sender.sendEvent(sender.marker); // working
+	*/	
+	
+	/* Testing 251 mType with Termination message
+	sender.msgr.mType = 251;
+	strcpy(sender.msgr.message, "Terminating");
+	sender.sendEvent(sender.marker); // working
+	//*/
+	
+	/* Testing 997 to receiver 1 with acknowledgement
+	sender.msgr.mType = 997;
+	strcpy(sender.msgr.message, "Hello from 997");
+	sender.sendEvent(sender.marker);
+	sender.getEvent(sender.marker + 1); // working
+	//*/	
+	
+	/* Testing 997 to receiver 2 with acknowledgement
+	sender.msgr.mType = 1097;
+	strcpy(sender.msgr.message, "Terminating");
+	sender.sendEvent(1097);
+	sender.getEvent(sender.marker + 101); // working
+	//*/
+	
+	/* Testing 997 termination to both receivers
+	sender.msgr.mType = 997;
+	strcpy(sender.msgr.message, "Terminating");
+	sender.sendEvent(sender.marker);
+	sender.getEvent(sender.marker + 1);
+	  
+	sender.msgr.mType = 1097;
+	strcpy(sender.msgr.message, "Terminating");
+	sender.sendEvent(1097);
+	sender.getEvent(sender.marker + 101); // working
+	//*/
+	
+	//* Testing 997 events to termination loop to both receivers
+	int test_loop_counter = 0;
+	
+	while(true)
+	{		
+		cout << "test_loop_counter = " << test_loop_counter << endl;
+		
+		sender.generateRandomNumber();
+		
+		if (sender.processNumber())
 		{
-			sender.qid = msgget(ftok(ftok_path,ftok_id),0);
-			cout << "sender.qid = " << sender.qid << endl;
-			//sender.sendEvent(118);
-			//cin.get();			
+			sender.sendEvent(sender.marker);
+			sender.getEvent(sender.marker + 1);
+			
+			sender.sendEvent(sender.marker + 100);
+			sender.getEvent(sender.marker + 101);
 		}
-		else
+		
+		if (test_loop_counter++ == 1000)
 		{
-			cin.get();
-			cout << "sender.qid = " << sender.qid << endl;
-			cout << sender.marker << " found the queue! Now ready! " << endl;
-			cout << "qid = " << sender.qid << endl;
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendEvent(sender.marker);
+			sender.getEvent(sender.marker + 1);
+			  
+			sender.msgr.mType = 1097;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendEvent(1097);
+			sender.getEvent(sender.marker + 101);
+			
+			// need final acknowledgement from sender
+			
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Goodbye, #1!");
+			sender.sendEvent(sender.marker);
+			  
+			sender.msgr.mType = 1097;
+			strcpy(sender.msgr.message, "Goodbye, #2!");
+			sender.sendEvent(1097);
+			
 			break;
+			
 		}
 	}
-	
-	while (true) // main program
-	{
-		sender.generateRandomNumber(); // random number is generated
-			
-		if (sender.processNumber()) // if generated number is modular to marker (251 | 257 | 997) then do
-		{		
-			if (sender.marker == 251)
-			{
-				if (test_counter++ < 5)
-				{
-					sender.sendEvent(sender.marker);
-				}
-				else
-				{
-					sender.terminate();
-				}
-			}
-			
-			if (sender.marker == 257)
-			{
-				sender.sendEvent(257);
-			}
-		
-			if (sender.marker == 997)
-			{
-				if (sender.event < 100)
-				{
-					//sender.terminate(); // function that initiates terminating process.
-				}
-				
-				sender.sendEvent(997); // send event 
-				sender.receiveEvent(998); // wait for ack		
-			}
-		}
-		
-		if (!tempConfirmContinue(sender)) // prompt to continue for testing
-		{
-			break;
-		}
-	}
-
+	//*/
 		
 	return 0;
 }

@@ -74,6 +74,7 @@ bool Receiver::getEvent(long mTypeIn)
 
 bool Receiver::sendEvent(long mTypeIn)
 {
+	cout << "****mTypeIn = " << mTypeIn << endl;
 	cout << "sendEvent" << endl;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
@@ -129,35 +130,63 @@ bool tempConfirmContinue(Receiver recIn)
 
 int main()
 {
-	int senderBit = 01; // keeping track of senders. 1x represents 997, x1 represents 251 or 257
+	int senderBit = 10; // keeping track of senders. 1x represents 997, x1 represents 251 or 257
 	
 	Receiver receiver(msgget(ftok(ftok_path,ftok_id),IPC_CREAT|0600)); // Removed IPC_EXCL since Q must be shared
 	
 	if (receiver.id == 1)
 	{
-		cout << "receiver.id is " << 1 << endl;
+		cout << "receiver.id is " << receiver.id << endl;
 		while (true)
-		{
-			// get 251
-			
-			if (senderBit % 10 == 1)
+		{	
+			if (senderBit % 10 == 1) // if sender 25x still alive
 			{
-				if (receiver.getEvent(251) != -1) // if 251 found
+				if (receiver.getEvent(251) != -1) // if 251 found // should only receive event and print as long as sender is active
 				{
-					cout << "Received message from 251" << endl;
-					cout << "Copying 251 ack to msgr" << endl;
-					strcpy(receiver.msgr.message, "251 ack'd by r1");
-					cout << "Sending 251 ack" << endl;
-					receiver.sendEvent(251);
+					cout << "Received message from 251" << endl; //testing
+					
+					cout << "Checking if message is for terminating" << endl;
+										
+					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 251 is terminating
+					{
+						senderBit--; // adjust senderBit to x0
+						cout << "senderBit is now " << senderBit << endl; // testing
+						
+					}
+					//cout << "Copying 251 ack to msgr" << endl;
+					//strcpy(receiver.msgr.message, "251 ack'd by r1");
+					//cout << "Sending 251 ack" << endl;
+					//receiver.sendEvent(251);
 				}
 			}
 			
-			if (senderBit >= 10)
+			if (senderBit >= 10) // if sender 997 still alive
 			{
-				if (receiver.getEvent(997) != -1) // if 997 found
-				{	
-					cout << "Received message for 997" << endl;
-					// add later
+				if (receiver.getEvent(997) != -1) // if 251 found // should only receive event and print as long as sender is active
+				{
+					cout << "Received message from 997" << endl; //testing
+					
+					cout << "Checking if message is for terminating" << endl;
+										
+					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 997 is terminating
+					{
+						senderBit -= 10; // adjust senderBit to 0x
+						cout << "senderBit is now " << senderBit << endl; // testing
+					}
+					
+					cout << "Copying 997 ack to msgr" << endl;
+					strcpy(receiver.msgr.message, "997 ack'd by r1");
+					cout << "Sending 997 ack" << endl;
+					receiver.sendEvent(998);
+					cout << "Sent" << endl;
+					
+					if (senderBit < 10)
+					{
+						cout << "Waiting for final acknowledgement." << endl;
+						receiver.getEvent(997);
+						cout << "final acknowledgement received." << endl;
+						break;
+					}
 				}
 			}
 			// if termination
@@ -170,35 +199,84 @@ int main()
 				// if senderbit is 0
 					//
 			
-			if (!tempConfirmContinue(receiver))
+			/*if (!tempConfirmContinue(receiver))
 			{
 				break;
 			}
+			*/
 		}		
 	}
 	
-	else if (receiver.id == 2)
+	else if (receiver.id == 2) // 257 and 997
 	{
+		cout << "receiver.id is " << receiver.id << endl;
 		while (true)
-		{
-			// get 257
-			// get 1097
-
-			receiver.getEvent(997); // should go before if statement since both receive
-				
-			// send 1098
-			// if message count is 5000
-				// send 2 for sender 257
-				// terminate
-				
-			if (!tempConfirmContinue(receiver))
+		{	
+			if (senderBit % 10 == 1) // if sender 25x still alive
 			{
-				cout << "You have chosen to quit" << endl;
-				break;
+				if (receiver.getEvent(257) != -1) // if 257 found // should only receive event and print as long as sender is active
+				{
+					cout << "Received message from 257" << endl; //testing
+					
+					cout << "Checking if message is for terminating" << endl;
+										
+					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 251 is terminating
+					{
+						senderBit--; // adjust senderBit to x0
+						cout << "senderBit is now " << senderBit << endl; // testing
+						
+					}
+				}
 			}
 			
+			if (senderBit >= 10) // if sender 997 still alive
+			{
+				if (receiver.getEvent(1097) != -1) // if 997 found // should only receive event and print as long as sender is active
+				{
+					cout << "Received message from 997" << endl; //testing
+					
+					cout << "Checking if message is for terminating" << endl;
+										
+					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 997 is terminating
+					{
+						senderBit -= 10; // adjust senderBit to 0x
+						cout << "senderBit is now " << senderBit << endl; // testing
+					}
+					
+					cout << "Copying 997 ack to msgr" << endl;
+					strcpy(receiver.msgr.message, "997 ack'd by r2");
+					cout << "Sending 997 ack" << endl;
+					receiver.sendEvent(1098);
+					cout << "Sent" << endl;
+					
+					if (senderBit < 10)
+					{
+						cout << "Waiting for final acknowledgement." << endl;
+						receiver.getEvent(1097);
+						cout << "final acknowledgement received." << endl;
+						break;
+					}
+				}
+			}
+			// if termination
+				// change senderbit
+				// if senderbit is 0
+					// cleanup mtypes (997, 251) from queue
+					// check if other receiver is alive???
+					// terminate self
+				
+				// if senderbit is 0
+					//
+			
+			/*if (!tempConfirmContinue(receiver))
+			{
+				break;
+			}
+			*/
 		}
 	}
+	
+	cin.get();
 		
 	if (!receiver.terminate())
 	{
