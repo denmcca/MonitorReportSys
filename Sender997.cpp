@@ -29,9 +29,9 @@ int generateRandomNumber()
 
 string intToString (int a)
 {
-    ostringstream temp;
-    temp << a;
-    return temp.str();
+	ostringstream temp;
+	temp << a;
+	return temp.str();
 }
 
 void sendMessage(string msgContent, long mType)
