@@ -37,10 +37,10 @@ string intToString (int a)
 void sendMessage(string msgContent, long mType)
 {
 	cout << "Sending message '" << msgContent << "' to mType = " << mType << endl;
-    MsgPigeon msg;
-    msg.mType = mType;
-    strcpy(msg.message, msgContent.c_str());
-    msgsnd(qid, (struct MsgPigeon *)&msg, msg.getSize(), 0);
+	MsgPigeon msg;
+	msg.mType = mType;
+	strcpy(msg.message, msgContent.c_str());
+	msgsnd(qid, (struct MsgPigeon *)&msg, msg.getSize(), 0);
 }
 
 
