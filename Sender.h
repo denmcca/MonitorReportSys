@@ -1,4 +1,7 @@
 #include "MsgPigeon.cpp"
+#include <string>
+
+using namespace std;
 
 class Sender
 {
@@ -17,8 +20,9 @@ class Sender
 	Sender(int);	// Constructor
 	int assignNumber();	// prompts user to select from available marker values
 	int getMarkerNumber(); // prompts user to select value from marker list
-	void sendEvent(long); // sends event
-	void getEvent(long);	// gets event (acknowledgements, termination messages)
+	void setMessage(string);
+	void sendMessage(long); // sends event
+	void getMessage(long);	// gets event (acknowledgements, termination messages)
 	bool terminate();
 	int generateRandomNumber();
 	bool processNumber();	// Checks if previous event is modular to marker.

@@ -5,6 +5,7 @@
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <string>
 #include <cstring>
 
 const char* ftok_path = ".";
@@ -12,9 +13,9 @@ const int ftok_id = 'u';
 
 using namespace std;
 
-Receiver::Receiver(int qidIn)
+Receiver::Receiver(int qid_in)
 {
-	qid = qidIn;
+	qid = qid_in;
 	id = assignReceiverNumber();
 	cout << "id is " << id << endl;
 }
@@ -52,9 +53,9 @@ int Receiver::getReceiverNumber()
 	}
 }
 
-bool Receiver::getEvent(long mTypeIn)
+bool Receiver::getMessage(long mTypeIn)
 {
-	cout << "getEvent" << endl;
+	cout << "getMessage" << endl;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
 	
@@ -72,21 +73,45 @@ bool Receiver::getEvent(long mTypeIn)
 	
 }
 
-bool Receiver::sendEvent(long mTypeIn)
+void Receiver::printQueueNotFoundError()
+{
+	cout << "Error: Message queue is missing!" << endl;
+}
+
+void Receiver::printMsg()
+{	
+	cout << msgr.mType << " sent: " << msgr.message << endl;
+}
+
+void Receiver::setMessage(string msgIn)
+{
+	strcpy(msgr.message, msgIn.c_str());
+}
+
+bool Receiver::sendMessage(long mTypeIn)
 {
 	cout << "****mTypeIn = " << mTypeIn << endl;
-	cout << "sendEvent" << endl;
+	cout << "sendMessage" << endl;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
 	
-	msgr.mType = mTypeIn;
+	
+	if (id == 1)
+	{
+		msgr.mType = mTypeIn;
+	}
+	if (id == 2)
+	{
+		msgr.mType = mTypeIn + 100;
+	}
+	
+	cout << "+++Sending message with msgr.mType = " << msgr.mType << endl;
 	
 	int result = msgsnd(qid, (struct msgbuf *)&msgr, msgr.getSize(), 0);
 	
 	if (result == -1)
 	{
-		cout << "Error: Message unsuccessfully sent to the queue! ";
-		cin.get();
+		cout << "Error: Message queue missing! ";
 		
 		return false;
 	}
@@ -94,19 +119,69 @@ bool Receiver::sendEvent(long mTypeIn)
 	return true;
 }
 
-bool Receiver::terminate()
+bool Receiver::sendAcknowledgement()
 {
-	int result = msgctl(qid, IPC_RMID, NULL);
+	cout << "Copying 997 ack to msgr" << endl;
+	string msg = "r" + std::to_string(id) + string(" acknowledgement received");
+	setMessage(msg);
+	cout << "Sending 997 ack" << endl;
+	sendMessage(msgr.mType + 1);
+	cout << "Sent" << endl;
+}
+
+void Receiver::terminateQueue()
+{
+	cleanUpQueue();
 	
-	if (result == 0)
+	if (isQueueEmpty()) // if 0 then queue is empty
+	{
+	
+		int result = msgctl(qid, IPC_RMID, NULL); // deallocates queue
+	
+		if (result == 0) // if 0 queue successfully deallocated
+		{
+			cout << "Queue " << qid << " deallocated!" << endl;
+		}
+		else
+		{
+			cout << "Warning: unable to deallocate queue!\n";
+		}
+	}
+}
+
+bool Receiver::isQueueEmpty()
+{
+	struct msqid_ds buf_nfo;
+	
+	msgctl(qid, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
+	
+	if (buf_nfo.msg_qnum == 0)
+	{
 		return true;
+	}
+	
+	return false;
+}
+
+bool Receiver::isTerminate()
+{
+	if (strcmp(msgr.message, "Terminating") == 0)
+	{
+		return true;
+	}
 	
 	return false;
 }
 
 void Receiver::cleanUpQueue()
 {
-
+	while (!isQueueEmpty())
+	{
+		getMessage(-2000);
+		cout << msgr.message << endl;
+	}
+	
+	cout << "Queue is now empty." << endl;
 }
 
 bool tempConfirmContinue(Receiver recIn)
@@ -128,67 +203,49 @@ bool tempConfirmContinue(Receiver recIn)
 	return true;
 }
 
+
 int main()
 {
+	
+	// assign codes/mtypes as ints here		
+		
 	int senderBit = 10; // keeping track of senders. 1x represents 997, x1 represents 251 or 257
+	bool terminated = false;
+	int msgCount = 0;
+	int mType = 0;
 	
-	Receiver receiver(msgget(ftok(ftok_path,ftok_id),IPC_CREAT|0600)); // Removed IPC_EXCL since Q must be shared
+	Receiver receiver(msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600)); // Removed IPC_EXCL since Q must be shared
 	
-	if (receiver.id == 1)
+	//setBit
+	
+	while (!terminated && senderBit != 0)
 	{
-		cout << "receiver.id is " << receiver.id << endl;
-		while (true)
-		{	
+		if (receiver.id == 1)
+		{		
+
 			if (senderBit % 10 == 1) // if sender 25x still alive
 			{
-				if (receiver.getEvent(251) != -1) // if 251 found // should only receive event and print as long as sender is active
+				if (receiver.getMessage(251) != -1) // if 251 
+				// should only receive event and print as long as sender is active
 				{
 					cout << "Received message from 251" << endl; //testing
 					
 					cout << "Checking if message is for terminating" << endl;
 										
-					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 251 is terminating
+					if (receiver.isTerminate()) // if 251 is terminating
 					{
 						senderBit--; // adjust senderBit to x0
 						cout << "senderBit is now " << senderBit << endl; // testing
-						
 					}
-					//cout << "Copying 251 ack to msgr" << endl;
-					//strcpy(receiver.msgr.message, "251 ack'd by r1");
-					//cout << "Sending 251 ack" << endl;
-					//receiver.sendEvent(251);
+				}
+				else
+				{
+					receiver.printQueueNotFoundError();
+					return 1; // message queue is gone
 				}
 			}
 			
-			if (senderBit >= 10) // if sender 997 still alive
-			{
-				if (receiver.getEvent(997) != -1) // if 251 found // should only receive event and print as long as sender is active
-				{
-					cout << "Received message from 997" << endl; //testing
-					
-					cout << "Checking if message is for terminating" << endl;
-										
-					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 997 is terminating
-					{
-						senderBit -= 10; // adjust senderBit to 0x
-						cout << "senderBit is now " << senderBit << endl; // testing
-					}
-					
-					cout << "Copying 997 ack to msgr" << endl;
-					strcpy(receiver.msgr.message, "997 ack'd by r1");
-					cout << "Sending 997 ack" << endl;
-					receiver.sendEvent(998);
-					cout << "Sent" << endl;
-					
-					if (senderBit < 10)
-					{
-						cout << "Waiting for final acknowledgement." << endl;
-						receiver.getEvent(997);
-						cout << "final acknowledgement received." << endl;
-						break;
-					}
-				}
-			}
+			
 			// if termination
 				// change senderbit
 				// if senderbit is 0
@@ -204,86 +261,93 @@ int main()
 				break;
 			}
 			*/
-		}		
-	}
-	
-	else if (receiver.id == 2) // 257 and 997
-	{
-		cout << "receiver.id is " << receiver.id << endl;
-		while (true)
-		{	
-			if (senderBit % 10 == 1) // if sender 25x still alive
-			{
-				if (receiver.getEvent(257) != -1) // if 257 found // should only receive event and print as long as sender is active
-				{
-					cout << "Received message from 257" << endl; //testing
-					
-					cout << "Checking if message is for terminating" << endl;
-										
-					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 251 is terminating
-					{
-						senderBit--; // adjust senderBit to x0
-						cout << "senderBit is now " << senderBit << endl; // testing
-						
-					}
-				}
-			}
-			
-			if (senderBit >= 10) // if sender 997 still alive
-			{
-				if (receiver.getEvent(1097) != -1) // if 997 found // should only receive event and print as long as sender is active
-				{
-					cout << "Received message from 997" << endl; //testing
-					
-					cout << "Checking if message is for terminating" << endl;
-										
-					if (strcmp(receiver.msgr.message, "Terminating") == 0) // if 997 is terminating
-					{
-						senderBit -= 10; // adjust senderBit to 0x
-						cout << "senderBit is now " << senderBit << endl; // testing
-					}
-					
-					cout << "Copying 997 ack to msgr" << endl;
-					strcpy(receiver.msgr.message, "997 ack'd by r2");
-					cout << "Sending 997 ack" << endl;
-					receiver.sendEvent(1098);
-					cout << "Sent" << endl;
-					
-					if (senderBit < 10)
-					{
-						cout << "Waiting for final acknowledgement." << endl;
-						receiver.getEvent(1097);
-						cout << "final acknowledgement received." << endl;
-						break;
-					}
-				}
-			}
-			// if termination
-				// change senderbit
-				// if senderbit is 0
-					// cleanup mtypes (997, 251) from queue
-					// check if other receiver is alive???
-					// terminate self
-				
-				// if senderbit is 0
-					//
-			
-			/*if (!tempConfirmContinue(receiver))
-			{
-				break;
-			}
-			*/
-		}
-	}
-	
-	cin.get();
 		
-	if (!receiver.terminate())
+		}
+		
+		else if (receiver.id == 2 && senderBit % 10 == 1) // 257
+		{					
+			// get 257 message (does not terminate before r2)
+			receiver.getMessage(257);
+			++msgCount;
+			cout << "(1) msgCount = " << msgCount << endl;					
+			
+			//receiver.setMessage("Alive");
+			//receiver.sendMessage(2);
+		}
+		
+		if (msgCount == 5000)
+		{
+			cout << "***Set to terminate. (1)" << endl;
+			terminated = true;
+		}
+				
+		if (senderBit >= 10 && !terminated) // if sender 997 still alive
+		{
+			if (receiver.id == 1)
+				mType = 997;
+			else
+				mType = 1097;
+			
+			if (receiver.getMessage(mType) != -1) // if 997 found // should only
+			// receive event and print as long as sender is active
+			{
+				cout << "Received message from 997" << endl; //testing
+				
+				cout << "Checking if message is for terminating" << endl;
+				
+				if (receiver.isTerminate()) // if 997 is terminating
+				{
+					senderBit -= 10; // adjust senderBit to 0x
+					cout << "senderBit is now " << senderBit << endl; // testing
+				}
+				else
+				{
+					++msgCount; // if message count is 5000, 257 and 997 must be told to stop
+					cout << "(2) msgCount = " << msgCount << endl;					
+				}
+					
+				receiver.sendAcknowledgement();
+				
+				/* Probably not necessary, if receivers clean up after termination
+				if (senderBit < 10)
+				{
+					cout << "Waiting for final acknowledgement." << endl;
+					receiver.getMessage(1097);
+					cout << "final acknowledgement received." << endl;
+					break;
+				}
+				*/
+			}
+			else
+			{
+				receiver.printQueueNotFoundError();
+			}
+			
+		}
+		
+		if(msgCount == 5000)
+		{
+			cout << "***Set to terminate. (2)" << endl;
+			terminated = true;
+		}
+		
+	} // end while, terminate is true
+	
+	if (receiver.id == 1)
 	{
-		cout << "Warning: unable to deallocate queue!\n";
-		cout << "Press any key to exit program: ";
-		cin.get();
+		receiver.getMessage(2);
+		receiver.terminateQueue();
+		
 	}
+	else if (receiver.id == 2)
+	{
+		receiver.sendMessage(2);
+	}
+		
+	PTools::flushCin();
+	
+	cout << "Press any key to exit program: ";
+	cin.get();
 	
 	return 0;
 }

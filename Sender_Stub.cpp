@@ -3,6 +3,7 @@
 #include "PTools.cpp"
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <string>
 #include <cstring>
 #include <stdlib.h>     
 #include <time.h>       
@@ -11,6 +12,18 @@
 
 /*
 	Using as test stub for testing with Receiver program. - Dennis 
+	
+	Ideas:
+	-- How to manage deallocation of queue 
+	Receiver 1 creates queue, receiver 2 sends special message to queue, 
+	receiver 1 set to terminate, receiver 1 checks if queue is empty to
+	deallocate queue, receiver 2 sets to terminate, receiver 2 checks if
+	queue is empty, queue is not empty, receiver 2 retrieves any message,
+	receiver 2 checks if queue is empty, queue is empty, receiver 2 
+	terminates, receiver 1 deallocates queue then terminates.
+	
+	
+	
 */
 
 using namespace std;
@@ -67,9 +80,15 @@ int Sender::getMarkerNumber()
 	return choice;
 }
 
-void Sender::sendEvent(long mTypeIn) // mTypeIn incase need to send other than marker
+void Sender::setMessage(string msgIn)
 {
-	cout << "sendEvent" << endl;
+	strcpy(msgr.message, msgIn.c_str());
+}
+
+void Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
+{
+	cout << "sendMessage" << endl;
+	msgr.mType = mTypeIn;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
@@ -93,9 +112,9 @@ void Sender::sendEvent(long mTypeIn) // mTypeIn incase need to send other than m
 	}
 }
 
-void Sender::getEvent(long mTypeIn)
+void Sender::getMessage(long mTypeIn)
 {
-	cout << "getEvent" << endl;
+	cout << "getMessage" << endl;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
@@ -113,11 +132,11 @@ bool Sender::terminate() // mType will be 122 for termination calls
 	{
 		if (receiverBit % 10 == 1)
 		{	
-			sendEvent(marker + 1);
+			sendMessage(marker + 1);
 		}
 		if (receiverBit >= 10)
 		{
-			sendEvent(marker + 101);
+			sendMessage(marker + 101);
 		}
 	}
 	
@@ -132,6 +151,9 @@ bool Sender::terminate() // mType will be 122 for termination calls
 int Sender::generateRandomNumber() // how to generate 32 bit integers?
 {
 	event = rand();
+	
+	cout << "random number generated = " << event << endl;
+
 	return event;
 }
 
@@ -167,48 +189,48 @@ bool tempConfirmContinue(Sender sendIn)
 }
 
 int main()
-{
+{		
 	Sender sender(msgget(ftok(ftok_path,ftok_id),0));	
 	
 	/* Testing 251 mType
 	sender.msgr.mType = 251;
 	strcpy(sender.msgr.message, "TESTING");
-	sender.sendEvent(sender.marker); // working
+	sender.sendMessage(sender.marker); // working
 	*/	
 	
 	/* Testing 251 mType with Termination message
 	sender.msgr.mType = 251;
 	strcpy(sender.msgr.message, "Terminating");
-	sender.sendEvent(sender.marker); // working
+	sender.sendMessage(sender.marker); // working
 	//*/
 	
 	/* Testing 997 to receiver 1 with acknowledgement
 	sender.msgr.mType = 997;
 	strcpy(sender.msgr.message, "Hello from 997");
-	sender.sendEvent(sender.marker);
-	sender.getEvent(sender.marker + 1); // working
+	sender.sendMessage(sender.marker);
+	sender.getMessage(sender.marker + 1); // working
 	//*/	
 	
 	/* Testing 997 to receiver 2 with acknowledgement
 	sender.msgr.mType = 1097;
 	strcpy(sender.msgr.message, "Terminating");
-	sender.sendEvent(1097);
-	sender.getEvent(sender.marker + 101); // working
+	sender.sendMessage(1097);
+	sender.getMessage(sender.marker + 101); // working
 	//*/
 	
 	/* Testing 997 termination to both receivers
 	sender.msgr.mType = 997;
 	strcpy(sender.msgr.message, "Terminating");
-	sender.sendEvent(sender.marker);
-	sender.getEvent(sender.marker + 1);
+	sender.sendMessage(sender.marker);
+	sender.getMessage(sender.marker + 1);
 	  
 	sender.msgr.mType = 1097;
 	strcpy(sender.msgr.message, "Terminating");
-	sender.sendEvent(1097);
-	sender.getEvent(sender.marker + 101); // working
+	sender.sendMessage(1097);
+	sender.getMessage(sender.marker + 101); // working
 	//*/
 	
-	//* Testing 997 events to termination loop to both receivers
+	//* Testing 997 to receiver 1 with loop, acknowledgement, and terminate
 	int test_loop_counter = 0;
 	
 	while(true)
@@ -219,39 +241,183 @@ int main()
 		
 		if (sender.processNumber())
 		{
-			sender.sendEvent(sender.marker);
-			sender.getEvent(sender.marker + 1);
-			
-			sender.sendEvent(sender.marker + 100);
-			sender.getEvent(sender.marker + 101);
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
 		}
 		
-		if (test_loop_counter++ == 1000)
+		if (test_loop_counter++ == 100000)
 		{
 			sender.msgr.mType = 997;
 			strcpy(sender.msgr.message, "Terminating");
-			sender.sendEvent(sender.marker);
-			sender.getEvent(sender.marker + 1);
-			  
-			sender.msgr.mType = 1097;
-			strcpy(sender.msgr.message, "Terminating");
-			sender.sendEvent(1097);
-			sender.getEvent(sender.marker + 101);
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
 			
 			// need final acknowledgement from sender
+			// or queue gets closed before sender
+			// receives final message from receiver.
 			
 			sender.msgr.mType = 997;
 			strcpy(sender.msgr.message, "Goodbye, #1!");
-			sender.sendEvent(sender.marker);
+			sender.sendMessage(sender.marker);
+			
+			break;		
+		}		
+	}
+	
+	// Testing message queue clean up
+	strcpy(sender.msgr.message, "junk 1");
+	sender.sendMessage(32);
+	strcpy(sender.msgr.message, "r2 terminated!");	// Receiver 2 termination notification
+	sender.sendMessage(2);
+	strcpy(sender.msgr.message, "junk 2");
+	sender.sendMessage(122);
+	strcpy(sender.msgr.message, "junk 3");
+	sender.sendMessage(442);
+	//*/
+	
+	/* Testing 997 to receiver 1 with loop, acknowledgement, and terminate
+	int test_loop_counter = 0;
+	
+	while(true)
+	{		
+		cout << "test_loop_counter = " << test_loop_counter << endl;
+		
+		sender.generateRandomNumber();
+		
+		if (sender.processNumber())
+		{
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+		}
+		
+		if (test_loop_counter++ == 100000)
+		{
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+			
+			// need final acknowledgement from sender
+			// or queue gets closed before sender
+			// receives final message from receiver.
+			
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Goodbye, #1!");
+			sender.sendMessage(sender.marker);
+			
+			break;		
+		}
+	}
+	// Testing message queue clean up
+	strcpy(sender.msgr.message, "junk 1");
+	sender.sendMessage(32);
+	strcpy(sender.msgr.message, "junk 2");
+	sender.sendMessage(122);
+	strcpy(sender.msgr.message, "junk 3");
+	sender.sendMessage(442);
+	
+	// Receiver 2 termination notification
+	strcpy(sender.msgr.message, "r2 terminated!");
+	sender.sendMessage(2);
+	//*/	
+	
+	/* Testing 997 events to termination loop to both receivers
+	int test_loop_counter = 0;
+	
+	while(true)
+	{		
+		cout << "test_loop_counter = " << test_loop_counter << endl;
+		
+		sender.generateRandomNumber();
+		
+		if (sender.processNumber())
+		{
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+			
+			sender.sendMessage(sender.marker + 100);
+			sender.getMessage(sender.marker + 101);
+		}
+		
+		if (test_loop_counter++ == 100000)
+		{
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+			  
+			sender.msgr.mType = 1097;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendMessage(1097);
+			sender.getMessage(sender.marker + 101);
+			
+			// need final acknowledgement from sender
+			// or queue gets closed before sender
+			// receives final message from receiver.
+			
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Goodbye, #1!");
+			sender.sendMessage(sender.marker);
 			  
 			sender.msgr.mType = 1097;
 			strcpy(sender.msgr.message, "Goodbye, #2!");
-			sender.sendEvent(1097);
+			sender.sendMessage(1097);
+			
+			break;
+			
+		}
+	} // working
+	//*/
+	
+	/* Test receiver 2 termination with 997
+	while(true)
+	{				
+		sender.generateRandomNumber();
+		
+		if (sender.processNumber())
+		{
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+			
+			sender.sendMessage(sender.marker + 100);
+			sender.getMessage(sender.marker + 101);
+		}
+		
+		if ()
+		{
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendMessage(sender.marker);
+			sender.getMessage(sender.marker + 1);
+			  
+			sender.msgr.mType = 1097;
+			strcpy(sender.msgr.message, "Terminating");
+			sender.sendMessage(1097);
+			sender.getMessage(sender.marker + 101);
+			
+			// need final acknowledgement from sender
+			// or queue gets closed before sender
+			// receives final message from receiver.
+			
+			sender.msgr.mType = 997;
+			strcpy(sender.msgr.message, "Goodbye, #1!");
+			sender.sendMessage(sender.marker);
+			  
+			sender.msgr.mType = 1097;
+			strcpy(sender.msgr.message, "Goodbye, #2!");
+			sender.sendMessage(1097);
 			
 			break;
 			
 		}
 	}
+	//*/
+	
+	/* Testing mType < 0
+	sender.msgr.mType = 997;
+	strcpy(sender.msgr.message, "TESTING");
+	sender.sendMessage(sender.marker);
+	sender.getMessage(-10);
 	//*/
 		
 	return 0;
