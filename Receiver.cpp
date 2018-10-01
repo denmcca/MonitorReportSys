@@ -15,6 +15,8 @@ using namespace std;
 
 Receiver::Receiver(int qid_in)
 {
+	MSG_COUNT_MAX_997 = 100000;
+	MSG_TERM = "Terminating";
 	qid = qid_in;
 	id = assignReceiverNumber();
 	cout << "id is " << id << endl;
@@ -155,6 +157,8 @@ bool Receiver::isQueueEmpty()
 	
 	msgctl(qid, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
 	
+	//buf_nfo.msg_qnum = 0; // messages no longer accessible
+	
 	if (buf_nfo.msg_qnum == 0)
 	{
 		return true;
@@ -165,10 +169,15 @@ bool Receiver::isQueueEmpty()
 
 bool Receiver::isTerminate()
 {
-	if (strcmp(msgr.message, "Terminating") == 0)
+	cout << "isTerminate" << endl;
+	
+	if (strcmp(msgr.message, MSG_TERM.c_str()) == 0)
 	{
+		cout << "True" << endl;
 		return true;
 	}
+	
+	cout << "False" << endl;
 	
 	return false;
 }
@@ -207,16 +216,20 @@ bool tempConfirmContinue(Receiver recIn)
 int main()
 {
 	
-	// assign codes/mtypes as ints here		
-		
-	int senderBit = 10; // keeping track of senders. 1x represents 997, x1 represents 251 or 257
+	// assign codes/mtypes as ints here
+
+	
+	// keeping track of senders. 1x represents 997, x1 represents 251 or 257	
+	int senderBit = 10;
+	 
 	bool terminated = false;
 	int msgCount = 0;
 	int mType = 0;
 	
-	Receiver receiver(msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600)); // Removed IPC_EXCL since Q must be shared
+	// Removed IPC_EXCL since Q must be shared
+	Receiver receiver(msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600)); 
 	
-	//setBit
+	//setBit here
 	
 	while (!terminated && senderBit != 0)
 	{
@@ -235,7 +248,9 @@ int main()
 					if (receiver.isTerminate()) // if 251 is terminating
 					{
 						senderBit--; // adjust senderBit to x0
-						cout << "senderBit is now " << senderBit << endl; // testing
+						
+						// testing
+						cout << "senderBit is now " << senderBit << endl; 
 					}
 				}
 				else
@@ -243,25 +258,7 @@ int main()
 					receiver.printQueueNotFoundError();
 					return 1; // message queue is gone
 				}
-			}
-			
-			
-			// if termination
-				// change senderbit
-				// if senderbit is 0
-					// cleanup mtypes (997, 251) from queue
-					// check if other receiver is alive???
-					// terminate self
-				
-				// if senderbit is 0
-					//
-			
-			/*if (!tempConfirmContinue(receiver))
-			{
-				break;
-			}
-			*/
-		
+			}		
 		}
 		
 		else if (receiver.id == 2 && senderBit % 10 == 1) // 257
@@ -275,7 +272,7 @@ int main()
 			//receiver.sendMessage(2);
 		}
 		
-		if (msgCount == 5000)
+		if (msgCount == receiver.MSG_COUNT_MAX_997 && receiver.id == 2)
 		{
 			cout << "***Set to terminate. (1)" << endl;
 			terminated = true;
@@ -302,7 +299,8 @@ int main()
 				}
 				else
 				{
-					++msgCount; // if message count is 5000, 257 and 997 must be told to stop
+					// if message count is 5000, 257 and 997 must be told to stop
+					++msgCount; 
 					cout << "(2) msgCount = " << msgCount << endl;					
 				}
 					
@@ -325,7 +323,7 @@ int main()
 			
 		}
 		
-		if(msgCount == 5000)
+		if(msgCount == receiver.MSG_COUNT_MAX_997)
 		{
 			cout << "***Set to terminate. (2)" << endl;
 			terminated = true;

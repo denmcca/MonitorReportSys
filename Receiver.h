@@ -14,6 +14,9 @@ class Receiver
 	int id;		// id of receiver
 	MsgPigeon msgr;	// sends and gets values from queue
 	
+	string MSG_TERM;
+	int MSG_COUNT_MAX_997;	
+	
 	// constructor
 	Receiver(int);	// constructor with parameter for queue id
 	

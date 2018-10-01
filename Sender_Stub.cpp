@@ -38,7 +38,9 @@ Sender::Sender(int qidIn)
 	marker = numList[assignNumber()];
 	MsgPigeon msgr;	// sends and gets values from queue
 	
-	strcpy(eventMsg, "Hello World");
+	receiverBit = 01;
+	
+	setMessage("");
 	
 	srand(time(NULL));
 }
@@ -85,8 +87,9 @@ void Sender::setMessage(string msgIn)
 	strcpy(msgr.message, msgIn.c_str());
 }
 
-void Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
+int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
 {
+	int result = 0;
 	cout << "sendMessage" << endl;
 	msgr.mType = mTypeIn;
 	
@@ -96,7 +99,7 @@ void Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than
 	
 	cout << "msgr.getSize() = " << msgr.getSize() << endl;
 	
-	if (msgr.message == "Terminating")
+	if (strcmp(msgr.message, MSG_TERM.c_str()) == 0)
 	{
 		terminate();
 	}
@@ -105,11 +108,18 @@ void Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than
 	{
 		
 		msgr.mType = mTypeIn;
-		msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
+		result = msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
+		
+		if (result == -1)
+		{
+			cout << msgr.message << " did not make it into the msg queue!" << endl;
+		}
 	
 		strcpy(msgr.message, "");
 		msgr.mType = 0;
 	}
+	
+	return result;
 }
 
 void Sender::getMessage(long mTypeIn)
@@ -125,19 +135,31 @@ void Sender::getMessage(long mTypeIn)
 	cout << "Message = " << msgr.message << endl;
 }
 
-bool Sender::terminate() // mType will be 122 for termination calls
+bool Sender::terminate() // mType will be for termination calls
 {
+	cout << "terminate" << endl;
+	// sets message to terminate when terminating.
+	setMessage(MSG_TERM);
+	
 	//if 997 notify both receivers
+	cout << "marker = " << marker << endl;
+	
 	if (marker == 997)
 	{
+	
+	cout << "receiverBit = "<< receiverBit << endl;
 		if (receiverBit % 10 == 1)
 		{	
-			sendMessage(marker + 1);
+			sendMessage(marker);
+			receiverBit -= 1;
 		}
 		if (receiverBit >= 10)
 		{
-			sendMessage(marker + 101);
+			sendMessage(marker + 100);
+			receiverBit -= 10;
 		}
+		
+		cout << "receiverBit = " << receiverBit << endl;
 	}
 	
 	//if 251 notify receiver 1
@@ -152,7 +174,7 @@ int Sender::generateRandomNumber() // how to generate 32 bit integers?
 {
 	event = rand();
 	
-	cout << "random number generated = " << event << endl;
+	//cout << "random number generated = " << event << endl;
 
 	return event;
 }
@@ -191,6 +213,7 @@ bool tempConfirmContinue(Sender sendIn)
 int main()
 {		
 	Sender sender(msgget(ftok(ftok_path,ftok_id),0));	
+
 	
 	/* Testing 251 mType
 	sender.msgr.mType = 251;
@@ -230,7 +253,7 @@ int main()
 	sender.getMessage(sender.marker + 101); // working
 	//*/
 	
-	//* Testing 997 to receiver 1 with loop, acknowledgement, and terminate
+	/* Testing 997 to receiver 1 with loop, acknowledgement, and terminate
 	int test_loop_counter = 0;
 	
 	while(true)
@@ -267,7 +290,7 @@ int main()
 	// Testing message queue clean up
 	strcpy(sender.msgr.message, "junk 1");
 	sender.sendMessage(32);
-	strcpy(sender.msgr.message, "r2 terminated!");	// Receiver 2 termination notification
+	strcpy(sender.msgr.message, "r2 terminated!");	// r2 termination notification
 	sender.sendMessage(2);
 	strcpy(sender.msgr.message, "junk 2");
 	sender.sendMessage(122);
@@ -275,59 +298,43 @@ int main()
 	sender.sendMessage(442);
 	//*/
 	
-	/* Testing 997 to receiver 1 with loop, acknowledgement, and terminate
-	int test_loop_counter = 0;
+	//* Testing 997 to receiver 1 with loop, and event generator
 	
-	while(true)
-	{		
-		cout << "test_loop_counter = " << test_loop_counter << endl;
-		
-		sender.generateRandomNumber();
-		
-		if (sender.processNumber())
-		{
-			sender.sendMessage(sender.marker);
-			sender.getMessage(sender.marker + 1);
-		}
-		
-		if (test_loop_counter++ == 100000)
-		{
-			sender.msgr.mType = 997;
-			strcpy(sender.msgr.message, "Terminating");
-			sender.sendMessage(sender.marker);
-			sender.getMessage(sender.marker + 1);
-			
-			// need final acknowledgement from sender
-			// or queue gets closed before sender
-			// receives final message from receiver.
-			
-			sender.msgr.mType = 997;
-			strcpy(sender.msgr.message, "Goodbye, #1!");
-			sender.sendMessage(sender.marker);
-			
-			break;		
-		}
-	}
+	// Receiver 2 termination notification
+	strcpy(sender.msgr.message, "r2 terminated!");
+	sender.sendMessage(2);	
+	
 	// Testing message queue clean up
 	strcpy(sender.msgr.message, "junk 1");
 	sender.sendMessage(32);
 	strcpy(sender.msgr.message, "junk 2");
 	sender.sendMessage(122);
 	strcpy(sender.msgr.message, "junk 3");
-	sender.sendMessage(442);
+	sender.sendMessage(442); // working
 	
-	// Receiver 2 termination notification
-	strcpy(sender.msgr.message, "r2 terminated!");
-	sender.sendMessage(2);
+	while(sender.receiverBit > 0)
+	{				
+		sender.generateRandomNumber();
+		
+		if (sender.event - 1 < 100)
+		{
+			sender.terminate();
+		}
+		if (sender.processNumber() && sender.receiverBit > 0)
+		{
+			if (sender.sendMessage(sender.marker) != -1)
+				sender.getMessage(sender.marker + 1);
+			else
+				break;
+		}
+	}	
 	//*/	
 	
 	/* Testing 997 events to termination loop to both receivers
 	int test_loop_counter = 0;
 	
 	while(true)
-	{		
-		cout << "test_loop_counter = " << test_loop_counter << endl;
-		
+	{				
 		sender.generateRandomNumber();
 		
 		if (sender.processNumber())
@@ -367,7 +374,7 @@ int main()
 			
 		}
 	} // working
-	//*/
+	//////////////////////////*/
 	
 	/* Test receiver 2 termination with 997
 	while(true)
