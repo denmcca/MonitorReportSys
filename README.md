@@ -3,6 +3,9 @@ Assignment 02 (Group)
 
 Delegations:
   Andrew sender 997, Dennis receiver 1 and 2, Josh sender 257, James sender 251
+  
+Discord:
+  https://discord.gg/kpNJ6pN
 
 mTypes:
   // list of mTypes
