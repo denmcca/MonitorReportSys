@@ -3,10 +3,18 @@ Assignment 02 (Group)
 
 Delegations:
   Andrew sender 997, Dennis receiver 1 and 2, Josh sender 257, James sender 251
-
-mTypes:
-  // list of mTypes
   
+Discord:
+  https://discord.gg/kpNJ6pN
+
+mtype protocol:</br>
+997 sending to receiver 1: 997 </br>
+997 sending to receiver 2: 1097</br>
+251 to receiver 1: 251</br>
+257 to receiver 2: 257</br>
+receiver 1 to 997: 998</br>
+receiver 2 to 257: 258</br>
+receiver 2 to 997: 1098</br>
   
 Possible approaches to receiver termination:
 	r2 sends r1 msg when r2 terminates, then r1 cleans up queue before
