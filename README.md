@@ -2,23 +2,43 @@
 Assignment 02 (Group)
 
 Delegations:
-  Andrew sender 997, Dennis receiver 1 and 2, Josh sender 257, James sender 251
+	Andrew sender 997</br>
+	Dennis receiver 1 and 2</br>
+	Josh sender 257</br>
+	James sender 251</br>
   
 Discord:
-  https://discord.gg/kpNJ6pN
+	https://discord.gg/kpNJ6pN
 
-mtype protocol:</br>
-997 sending to receiver 1: 997 </br>
-997 sending to receiver 2: 1097</br>
-251 to receiver 1: 251</br>
-257 to receiver 2: 257</br>
-receiver 1 to 997: 998</br>
-receiver 2 to 257: 258</br>
-receiver 2 to 997: 1098</br>
-  
-Possible approaches to receiver termination:
-	r2 sends r1 msg when r2 terminates, then r1 cleans up queue before
-		deallocating queue.
+mType protocol:</br>
+	997 sending to receiver 1: 997 </br>
+	997 sending to receiver 2: 1097</br>
+	997 to 997 and receiver 2 (polling mechanism): 996</br>
+	251 to receiver 1: 251</br>
+	257 to receiver 2: 257</br>
+	257 to 257 and receiver 2 (polling mechanism): 256</br>
+	receiver 1 to 997: 998</br>
+	receiver 2 to 257: 258</br>
+	receiver 2 to 997: 1098</br>
+
+Polling Mechanism:
+	Senders associated to receiver 2 must send a message to the queue before it processes another
+	number. As the sender processes the next number, receiver 2 upon self-termination will receive 
+	that message and change its message to "Terminating". After the sender finishes the processing
+	the number, it will then pop the message from the queue and check the content of its message.
+	If it says "Terminating", then the sender must somehow disassociate itsef from sending any more
+	to receiver 2, thus eliminating unnecessary messages to the queue, and potentially termination
+	of sender.
+	
+	Pseudo code:
+		while loop
+		{
+			send polling message (mType = marker - 1)
+			generate and process number
+			get polling message (mType = marker - 1)
+			if message == terminate
+				disassociate with receiver 2
+		}
 	
 ----------------------------------------------------------------------------------------------
 Requirements	

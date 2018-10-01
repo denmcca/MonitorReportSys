@@ -16,7 +16,7 @@ class Sender
 	
 	int receiverBit; // right bit = receiver 1, left bit = receiver 2 // fix location later.
 	
-	string MSG_TERM = "Terminating";
+	string MSG_TERM;
 	
 	Sender(int);	// Constructor
 	int assignNumber();	// prompts user to select from available marker values

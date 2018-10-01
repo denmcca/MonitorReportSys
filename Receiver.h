@@ -15,7 +15,9 @@ class Receiver
 	MsgPigeon msgr;	// sends and gets values from queue
 	
 	string MSG_TERM;
-	int MSG_COUNT_MAX_997;	
+	string MSG_ACK;
+	int MSG_COUNT_MAX_R2;	
+	int senderBit;
 	
 	// constructor
 	Receiver(int);	// constructor with parameter for queue id
@@ -28,6 +30,7 @@ class Receiver
 	void setMessageType(long);	// sets mType
 	bool sendMessage(long);	// send message to queue
 	void terminateQueue();	// clean up values from queue.
+	void terminateSelf();
 	bool isQueueEmpty();	// checks if message queue is empty
 	bool isTerminate();	// checks if message received is message to terminate
 	void cleanUpQueue();	// removes messages with mtypes for which receiver is responsible.

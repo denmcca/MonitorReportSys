@@ -39,6 +39,7 @@ Sender::Sender(int qidIn)
 	MsgPigeon msgr;	// sends and gets values from queue
 	
 	receiverBit = 01;
+	MSG_TERM = "Terminating";
 	
 	setMessage("");
 	
@@ -104,20 +105,16 @@ int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than 
 		terminate();
 	}
 	
-	else
+	result = msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
+		
+	if (result == -1)
 	{
-		
-		msgr.mType = mTypeIn;
-		result = msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
-		
-		if (result == -1)
-		{
-			cout << msgr.message << " did not make it into the msg queue!" << endl;
-		}
+		cout << msgr.message << " did not make it into the msg queue!" << endl;
+	}		
 	
-		strcpy(msgr.message, "");
-		msgr.mType = 0;
-	}
+	// reset message
+	strcpy(msgr.message, "");
+	msgr.mType = 0;
 	
 	return result;
 }
@@ -150,12 +147,10 @@ bool Sender::terminate() // mType will be for termination calls
 	cout << "receiverBit = "<< receiverBit << endl;
 		if (receiverBit % 10 == 1)
 		{	
-			sendMessage(marker);
 			receiverBit -= 1;
 		}
 		if (receiverBit >= 10)
 		{
-			sendMessage(marker + 100);
 			receiverBit -= 10;
 		}
 		
@@ -213,7 +208,6 @@ bool tempConfirmContinue(Sender sendIn)
 int main()
 {		
 	Sender sender(msgget(ftok(ftok_path,ftok_id),0));	
-
 	
 	/* Testing 251 mType
 	sender.msgr.mType = 251;
@@ -318,14 +312,27 @@ int main()
 		
 		if (sender.event - 1 < 100)
 		{
-			sender.terminate();
+			sender.setMessage(sender.MSG_TERM);
+			sender.sendMessage(997);
+			
+			sender.setMessage(sender.MSG_TERM);
+			sender.sendMessage(1097);
 		}
 		if (sender.processNumber() && sender.receiverBit > 0)
 		{
+			
 			if (sender.sendMessage(sender.marker) != -1)
 				sender.getMessage(sender.marker + 1);
 			else
 				break;
+			
+			sender.setMessage(std::to_string(sender.event));
+				
+			if (sender.sendMessage(sender.marker + 100) != -1)
+				sender.getMessage(sender.marker + 101);
+			else
+				break;
+			
 		}
 	}	
 	//*/	
