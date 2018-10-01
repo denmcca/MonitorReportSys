@@ -144,14 +144,10 @@ an entry under the Message Queues section.
 
 $ ipcs
 ------ Shared Memory Segments --------
-key
-shmid owner perms bytes nattch status
+key	shmid	owner	perms	bytes	nattch	status
 ------ Semaphore Arrays --------
-key
-semid owner perms nsems
+key	semid	owner	perms	nsems
 ------ Message Queues --------
-key
-msqid owner perms used-bytes
-messages
+key	msqid	owner	perms	used-bytes	messages
 $
 
