@@ -7,9 +7,14 @@ Delegations:
 Discord:
   https://discord.gg/kpNJ6pN
 
-mTypes:
-  // list of mTypes
-  
+mtype protocol:
+997 sending to receiver 1: 997
+997 sending to receiver 2: 1097
+251 to receiver 1: 251
+257 to receiver 2: 257
+receiver 1 to 997: 998
+receiver 2 to 257: 258
+receiver 2 to 997: 1098
   
 Possible approaches to receiver termination:
 	r2 sends r1 msg when r2 terminates, then r1 cleans up queue before
