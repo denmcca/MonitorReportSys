@@ -8,16 +8,25 @@ class Receiver
 {
 	public:
 	// fields
+	const string MSG_TERM = "Terminating";	// Use when sending terminating messages or checking for term messages.
+	const string MSG_ACK = "Acknowledgement";	// Use when sending acknowledgement messages.
+	const int MSG_COUNT_MAX_R2 = 100;	// 5000 for final
+	const int MTYPE_EVENT_251 = 251;
+	const int MTYPE_EVENT_257 = 257;
+	const int MTYPE_EVENT_997 = 997;
+	const int MTYPE_ACK_997_R1 = 998;
+	const int MTYPE_ACK_997_R2 = 1098;
+	const int MTYPE_POLL_257 = 256;
+	const int MTYPE_POLL_997 = 998;
+	
 	static const int idListSize = 2;	// size of list that holds possible receiver ids.
 	int idList[idListSize] = {1, 2};	// list that holds values of possible receiver ids.
 	int qid;	// id of queue
 	int id;		// id of receiver
-	MsgPigeon msgr;	// sends and gets values from queue
-	
-	string MSG_TERM;
-	string MSG_ACK;
-	int MSG_COUNT_MAX_R2;	
 	int senderBit;
+	
+	// buffer object
+	MsgPigeon msgr;	// sends and gets values from queue
 	
 	// constructor
 	Receiver(int);	// constructor with parameter for queue id

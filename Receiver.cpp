@@ -15,29 +15,25 @@ using namespace std;
 
 Receiver::Receiver(int qid_in)
 {
-	MSG_COUNT_MAX_R2 = 100000; // set to 5000 for final
 	// keeping track of senders. 1x represents 997, x1 represents 251 or 257	
 	senderBit = 10;
-	MSG_TERM = "Terminating";
-	MSG_ACK = "Acknowledged";
 	
 	qid = qid_in;
 	id = assignReceiverNumber();
-	cout << "id is " << id << endl;
 }
 
-int Receiver::assignReceiverNumber()
+int Receiver::assignReceiverNumber() // prompts user for choice
 {
 	cout << "Which number do you want to assign to this receiver?\n";
 	for (int i = 0; i < idListSize; i++)
 	{
-		cout << i << ": " << idList[i] << endl;
+		cout << i + 1 << ": " << idList[i] << endl;
 	}
 	
 	return getReceiverNumber();
 }
 
-int Receiver::getReceiverNumber()
+int Receiver::getReceiverNumber() // gets user's choice
 {
 	int choice;
 	
@@ -47,9 +43,9 @@ int Receiver::getReceiverNumber()
 		{		
 			cout << "Enter selection: ";
 			cin >> choice;
-			if (!cin.good() | choice < 0 | choice > idListSize - 1)
+			if (!cin.good() | choice < 1 | choice > idListSize)
 				throw int();
-			return choice + 1;
+			return idList[choice - 1];
 		} 
 		catch (int e)
 		{
@@ -152,13 +148,13 @@ void Receiver::terminateQueue()
 
 void Receiver::terminateSelf() // only receiver 2 self terminates
 {
-	if (senderBit > 10)
+	if (senderBit >= 10)
 	{
 		cout << "Notifying 997 of Termination." << endl;
 		
 		getMessage(1096);	// gets status message from 997
 		setMessage(MSG_TERM);	// updates status message from 997 with term. msg.
-		sendMessage(1096);	// sends terminationn msg back to queue for 997 to get
+		sendMessage(1096);	// sends termination msg back to queue for 997 to get.
 	}
 	if (senderBit % 10 == 1)
 	{

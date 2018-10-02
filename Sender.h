@@ -16,7 +16,9 @@ class Sender
 	
 	int receiverBit; // right bit = receiver 1, left bit = receiver 2 // fix location later.
 	
-	string MSG_TERM;
+	const int EVENT_MIN = 100;	
+	const string MSG_TERM = "Terminating";
+	const string MSG_ALIVE = "I am alive!";
 	
 	Sender(int);	// Constructor
 	int assignNumber();	// prompts user to select from available marker values

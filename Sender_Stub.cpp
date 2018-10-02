@@ -38,8 +38,7 @@ Sender::Sender(int qidIn)
 	marker = numList[assignNumber()];
 	MsgPigeon msgr;	// sends and gets values from queue
 	
-	receiverBit = 01;
-	MSG_TERM = "Terminating";
+	receiverBit = 11; // for 997 where 1x is r1 and x1 is r2
 	
 	setMessage("");
 	
@@ -122,6 +121,8 @@ int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than 
 void Sender::getMessage(long mTypeIn)
 {
 	cout << "getMessage" << endl;
+	
+	msgr.mType = mTypeIn;
 	
 	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
@@ -295,8 +296,8 @@ int main()
 	//* Testing 997 to receiver 1 with loop, and event generator
 	
 	// Receiver 2 termination notification
-	strcpy(sender.msgr.message, "r2 terminated!");
-	sender.sendMessage(2);	
+	//strcpy(sender.msgr.message, "r2 terminated!");
+	//sender.sendMessage(2);	
 	
 	// Testing message queue clean up
 	strcpy(sender.msgr.message, "junk 1");
@@ -307,10 +308,17 @@ int main()
 	sender.sendMessage(442); // working
 	
 	while(sender.receiverBit > 0)
-	{				
+	{
+		cout << "(1)receiverBit = " << sender.receiverBit << endl;
+		if (sender.receiverBit % 10 == 1)
+		{
+			sender.setMessage(sender.MSG_ALIVE);
+			sender.sendMessage(1096);
+		}
+		
 		sender.generateRandomNumber();
 		
-		if (sender.event - 1 < 100)
+		if (sender.event - 1 < sender.EVENT_MIN)
 		{
 			sender.setMessage(sender.MSG_TERM);
 			sender.sendMessage(997);
@@ -320,20 +328,38 @@ int main()
 		}
 		if (sender.processNumber() && sender.receiverBit > 0)
 		{
+			if (sender.receiverBit >= 10)
+			{
+				if (sender.sendMessage(997) != -1)
+					sender.getMessage(998);
+				else
+					break; // msg queue missing
+			}
 			
-			if (sender.sendMessage(sender.marker) != -1)
-				sender.getMessage(sender.marker + 1);
-			else
-				break;
-			
-			sender.setMessage(std::to_string(sender.event));
-				
-			if (sender.sendMessage(sender.marker + 100) != -1)
-				sender.getMessage(sender.marker + 101);
-			else
-				break;
+			if (sender.receiverBit % 10 == 1)
+			{
+				sender.setMessage(std::to_string(sender.event));
+					
+				if (sender.sendMessage(1097) != -1)
+					sender.getMessage(1098);
+				else
+					break; // msg queue missing
+			}
 			
 		}
+		
+		if (sender.receiverBit % 10 == 1) // if r2 active
+		{
+			cout << "Polling now" << endl;
+			sender.getMessage(1096);
+			cout << "message = " << sender.msgr.message << endl;
+			
+			if (strcmp(sender.msgr.message, sender.MSG_TERM.c_str()) == 0) // if message r2 term
+			{
+				sender.receiverBit -= 1;
+				cout << "(2)receiverBit = " << sender.receiverBit << endl;
+			}
+		} 
 	}	
 	//*/	
 	
