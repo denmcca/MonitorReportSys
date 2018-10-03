@@ -13,19 +13,11 @@
 
 using namespace std;
 
-const char* ftok_path = ".";
-const int ftok_id = 'u';
-int qid = msgget(ftok(ftok_path,ftok_id),0);
-
 const int MTYPE_TO_R1 = 997;
 const int MTYPE_TO_R2 = 1097;
+const int MTYPE_R2_POLL = 996;
 const int MTYPE_FROM_R1 = 998;
 const int MTYPE_FROM_R2 = 1098;
-
-int generateRandomNumber()
-{
-	return rand();
-}
 
 string intToString (int a)
 {
@@ -34,7 +26,33 @@ string intToString (int a)
 	return temp.str();
 }
 
-void sendMessage(string msgContent, long mType)
+class Sender997
+{
+public:
+	int qid;
+	bool sendToR2; // initialized to "true", set to "false" after R2 terminates.
+	
+	Sender997();
+	void initQID();
+	int generateRandomNumber();
+	void sendMessage(string msgContent, long mType);
+	string getMessage(long mType);
+	void runMainLoop();
+};
+
+Sender997::Sender997()
+{
+	qid = -1;
+	sendToR2 = true;
+	srand(time(NULL));
+}
+
+int Sender997::generateRandomNumber()
+{
+	return rand();
+}
+
+void Sender997::sendMessage(string msgContent, long mType)
 {
 	cout << "Sending message '" << msgContent << "' to mType = " << mType << endl;
 	MsgPigeon msg;
@@ -43,8 +61,7 @@ void sendMessage(string msgContent, long mType)
 	msgsnd(qid, (struct MsgPigeon *)&msg, msg.getSize(), 0);
 }
 
-
-string getMessage(long mType)
+string Sender997::getMessage(long mType)
 {
 	cout << "Waiting for message from mType = " << mType << endl;
 	MsgPigeon msg;
@@ -53,8 +70,10 @@ string getMessage(long mType)
 	return msg.message;
 }
 
-void initQID()
+void Sender997::initQID()
 {
+	const char* ftok_path = ".";
+	const int ftok_id = 'u';
 	while (true)
 	{
 		if (qid == -1)
@@ -73,33 +92,50 @@ void initQID()
 	}
 }
 
-int main()
+void Sender997::runMainLoop()
 {
-	srand(time(NULL));
-
-	initQID();
-
 	while (true)
 	{
+		// Generate and process random number
 		int randInt = generateRandomNumber();
 		if (randInt < 100)
 		{
-			sendMessage("Terminated", MTYPE_TO_R1);
-			sendMessage("Terminated", MTYPE_TO_R2);
+			sendMessage("Terminating", MTYPE_TO_R1);
+			if (sendToR2) sendMessage("Terminating", MTYPE_TO_R2);
 			cout << "Sender 997 terminated" << endl;
-			return 0;
+			return;
 		}
 		else if ((randInt % 997) == 0)
 		{
 			string msgContent = intToString(randInt);
-			//cout << "Sending message " << msgContent << " to R1" << endl;
 			sendMessage(msgContent, MTYPE_TO_R1);
-			//cout << "Sending message " << msgContent << " to R2" << endl;
-			sendMessage(msgContent, MTYPE_TO_R2);
 
-			// get ackowledgements
+			// Get ackowledgement from R1
 			getMessage(MTYPE_FROM_R1);
-			getMessage(MTYPE_FROM_R2);
+
+			if (sendToR2)
+			{
+				sendMessage("Polling", MTYPE_R2_POLL);	
+				sendMessage(msgContent, MTYPE_TO_R2);
+
+				// Get ackowledgement from R2
+				getMessage(MTYPE_FROM_R2);
+
+				// Get poll message from queue
+				string response = getMessage(MTYPE_R2_POLL);
+				if (response == "Terminating")
+				{
+					sendToR2 = false;
+				}
+			}
 		}
-	}
+	}	
+}
+
+int main()
+{
+	Sender997 snd;
+
+	snd.initQID();
+	snd.runMainLoop();
 }
