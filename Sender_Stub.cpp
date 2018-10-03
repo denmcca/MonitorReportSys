@@ -309,11 +309,11 @@ int main()
 	
 	while(sender.receiverBit > 0)
 	{
-		cout << "(1)receiverBit = " << sender.receiverBit << endl;
+		//cout << "(1)receiverBit = " << sender.receiverBit << endl;
 		if (sender.receiverBit % 10 == 1)
 		{
 			sender.setMessage(sender.MSG_ALIVE);
-			sender.sendMessage(1096);
+			sender.sendMessage(996);
 		}
 		
 		sender.generateRandomNumber();
@@ -350,9 +350,9 @@ int main()
 		
 		if (sender.receiverBit % 10 == 1) // if r2 active
 		{
-			cout << "Polling now" << endl;
-			sender.getMessage(1096);
-			cout << "message = " << sender.msgr.message << endl;
+			//cout << "Polling now" << endl;
+			sender.getMessage(996);
+			//cout << "message = " << sender.msgr.message << endl;
 			
 			if (strcmp(sender.msgr.message, sender.MSG_TERM.c_str()) == 0) // if message r2 term
 			{

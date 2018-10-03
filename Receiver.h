@@ -10,14 +10,15 @@ class Receiver
 	// fields
 	const string MSG_TERM = "Terminating";	// Use when sending terminating messages or checking for term messages.
 	const string MSG_ACK = "Acknowledgement";	// Use when sending acknowledgement messages.
-	const int MSG_COUNT_MAX_R2 = 100;	// 5000 for final
-	const int MTYPE_EVENT_251 = 251;
-	const int MTYPE_EVENT_257 = 257;
-	const int MTYPE_EVENT_997 = 997;
-	const int MTYPE_ACK_997_R1 = 998;
-	const int MTYPE_ACK_997_R2 = 1098;
-	const int MTYPE_POLL_257 = 256;
-	const int MTYPE_POLL_997 = 998;
+	const int MSG_COUNT_MAX_R2 = 10;	// 5000 for final
+	const long MTYPE_EVENT_251 = 251;
+	const long MTYPE_EVENT_257 = 257;
+	const long MTYPE_EVENT_997 = 997;
+	const long MTYPE_EVENT_997_R2 = 1097;
+	const long MTYPE_ACK_997 = 998;
+	const long MTYPE_ACK_997_R2 = 1098;
+	const long MTYPE_POLL_257 = 256;
+	const long MTYPE_POLL_997 = 998;
 	
 	static const int idListSize = 2;	// size of list that holds possible receiver ids.
 	int idList[idListSize] = {1, 2};	// list that holds values of possible receiver ids.
@@ -34,10 +35,10 @@ class Receiver
 	// functions
 	int assignReceiverNumber();	// displays prompt for user to select from ids.
 	int getReceiverNumber();	// prompts user to enter choice of ids.
-	bool getMessage(long);	// get message from queue
-	void setMessage(string);	// sets message
-	void setMessageType(long);	// sets mType
-	bool sendMessage(long);	// send message to queue
+	bool getMessage(long*);	// get message from queue
+	void setMessage(string*);	// sets message
+	void setMessageType(long*);	// sets mType
+	bool sendMessage(long*);	// send message to queue
 	void terminateQueue();	// clean up values from queue.
 	void terminateSelf();
 	bool isQueueEmpty();	// checks if message queue is empty
