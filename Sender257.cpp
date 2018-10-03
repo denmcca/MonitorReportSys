@@ -8,12 +8,12 @@
 #include <random>
 #include "MsgPigeon.cpp"
 
-//int qid = msgget(ftok(".",'u'), 0);
-int qid = msgget(ftok(".",'u'), IPC_EXCL|IPC_CREAT|0600); //temp statement to create msg queue
+int qid = msgget(ftok(".",'u'), 0);
+//int qid = msgget(ftok(".",'u'), IPC_EXCL|IPC_CREAT|0600); //temp statement to create msg queue
 
 const int MSG_SIZE = sizeof(MsgPigeon) - sizeof(long);
 const std::string ALIVE_MSG = "KeepAlive";
-const int ALIVE_ID = 258;
+const int ALIVE_ID = 256;
 
 void sendMessage(std::string msgContent, long mType)
 {
@@ -54,5 +54,5 @@ int main()
         
     }
     //Temporary remove for creating the message queue
-    msgctl (qid, IPC_RMID, NULL);
+    //msgctl (qid, IPC_RMID, NULL);
 }
