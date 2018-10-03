@@ -55,13 +55,13 @@ int Receiver::getReceiverNumber() // gets user's choice
 	}
 }
 
-bool Receiver::getMessage(long* mTypeIn)
+bool Receiver::getMessage(const long& mTypeIn)
 {
 	cout << "getMessage" << endl;
 	
-	cout << "qid = " << qid << ", mTypeIn = " << &mTypeIn << endl;
+	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
 	
-	if (msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), *mTypeIn, 0) != -1)
+	if (msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 0) != -1)
 	{
 		cout << "Message found!" << endl;
 		cout << "msgr.message = " << msgr.message << endl;
@@ -85,23 +85,23 @@ void Receiver::printMsg()
 	cout << msgr.mType << " sent: " << msgr.message << endl;
 }
 
-void Receiver::setMessage(string* msgIn)
+void Receiver::setMessage(const string& msgIn)
 {
-	strcpy(msgr.message, (&msgIn).c_str());
+	strcpy(msgr.message, msgIn.c_str());
 }
 
-void Receiver::setMessageType(long* mTypeIn)
+void Receiver::setMessageType(const long& mTypeIn)
 {
 	// code
 }
 
-bool Receiver::sendMessage(long* mTypeIn)
+bool Receiver::sendMessage(const long& mTypeIn)
 {
 	cout << "sendMessage" << endl;
 	
 	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
 	
-	msgr.mType = &mTypeIn;
+	msgr.mType = mTypeIn;
 	
 	//cout << "+++Sending message with msgr.mType = " << msgr.mType << endl;
 	
@@ -122,7 +122,11 @@ bool Receiver::sendAcknowledgement()
 	cout << "sendAcknowledgement" << endl;
 	
 	setMessage(MSG_ACK);
-	sendMessage(msgr.mType + 1);
+	
+	if (id == 1)
+		sendMessage(MTYPE_ACK_997);
+	else
+		sendMessage(MTYPE_ACK_997_R2);
 }
 
 void Receiver::terminateQueue()
@@ -151,17 +155,17 @@ void Receiver::terminateSelf() // only receiver 2 self terminates
 	{
 		cout << "Notifying 997 of Termination." << endl;
 		
-		getMessage(&MTYPE_POLL_997);	// gets status message from 997
+		getMessage(MTYPE_POLL_997);	// gets status message from 997
 		setMessage(MSG_TERM);	// updates status message from 997 with term. msg.
-		sendMessage(&MTYPE_POLL_997);	// sends termination msg back to queue for 997 to get.
+		sendMessage(MTYPE_POLL_997);	// sends termination msg back to queue for 997 to get.
 	}
 	if (senderBit % 10 == 1)
 	{
 		cout << "Notifying 25x of Termination." << endl;
 
-		getMessage(&MTYPE_POLL_257);	// gets status message from 257
+		getMessage(MTYPE_POLL_257);	// gets status message from 257
 		setMessage(MSG_TERM);	// updates status message from 257 with term. msg.
-		sendMessage(&MTYPE_POLL_257);	// sends terminationn msg back to queue for 257 to get
+		sendMessage(MTYPE_POLL_257);	// sends terminationn msg back to queue for 257 to get
 		
 	}
 	senderBit = 00;
@@ -209,150 +213,179 @@ void Receiver::cleanUpQueue()
 	cout << "Queue is now empty." << endl;
 }
 
-
-//////////////////////////// debugging functions ////////////////////////////////////
-bool tempConfirmContinue(Receiver recIn)
+void disconnectSender(Receiver& r, long marker)
 {
-	cout << "tempConfirmContinue" << endl;
-	
-	char checkQueue; // used to control loop temporarily.
-
-	cout << "qid = " << recIn.qid << endl;
-	
-	cout << "Do you want to check queue again? (y/n): ";
-	cin >> checkQueue;
-	
-	if (checkQueue != 'y' & checkQueue != 'Y')
+	if (marker == 997)
 	{
-		return false;
+		r.senderBit -= 10; // disassociates 997	
 	}
 	
-	return true;
+	else if (marker == 257)
+	{
+		r.senderBit -= 1;
+	}
 }
-//////////////////////////// debugging functions end ////////////////////////////////
 
+void processMessage(Receiver& r)
+{
+	if (r.isTerminate()) // if 997 is terminating
+	{
+		//r.senderBit -= 10; // adjust senderBit to 0x
+		disconnectSender(r, 997);
+		cout << "***********senderBit is now " << r.senderBit << endl; // testing
+	}
+	else
+	{
+		// if message count is 5000, 257 and 997 must be told to stop
+		r.printMsg();
+		r.msgCount++; 
+	}
+}
 
+void process25x(Receiver& r)
+{
+	if (r.senderBit % 10 == 1) // if set to send to 25x
+	{
+		if (r.id == 1)
+		{
+			r.current_mType = r.MTYPE_EVENT_251;
+		}
+		else if (r.id == 2)
+		{
+			r.current_mType = r.MTYPE_EVENT_257;
+		}
+		else
+		{
+			cout << "Error: receiver id has invalid value which neither 1 or 2." << endl;
+		}
 
+		if (r.getMessage(r.current_mType) != -1) // if 251 
+		// should only receive event and print as long as sender is active
+		{
+			cout << "Received message from " << r.current_mType << endl; //testing
+								
+			if (r.isTerminate()) // if 25x is terminating
+			{
+				//r.senderBit--; // adjust senderBit to x0
+				disconnectSender(r, 257);
+				
+				// testing
+				cout << "senderBit is now " << r.senderBit << endl; 
+			}
+			else
+			{
+				r.printMsg();
+				++r.msgCount;
+			}
+		}
+		else
+		{
+			r.printQueueNotFoundError();
+		 	return; // message queue is gone
+		}	
+	}
+}
+
+void process997(Receiver& r)
+{
+	if (r.senderBit >= 10 && (r.msgCount < r.MSG_COUNT_MAX_R2 | r.id == 1)) // if sender 997 still alive
+	{
+		if (r.id == 1)
+			r.current_mType = r.MTYPE_EVENT_997;
+		else
+			r.current_mType = r.MTYPE_EVENT_997_R2;
+		
+		/*
+		if (r.getMessage(r.current_mType) != -1) // if 997 found // should only
+		// receive event and print as long as sender is active
+		{
+			if (r.isTerminate()) // if 997 is terminating
+			{
+				//r.senderBit -= 10; // adjust senderBit to 0x
+				disconnectSender(997);
+				cout << "***********senderBit is now " << r.senderBit << endl; // testing
+			}
+			else
+			{
+				// if message count is 5000, 257 and 997 must be told to stop
+				r.printMsg();
+				r.msgCount++; 
+			}
+				
+			r.sendAcknowledgement();				
+		}
+		*/
+		
+		r.getMessage(r.current_mType);
+		processMessage(r);
+		r.sendAcknowledgement();
+	}
+}
+
+bool isMessageCountMax(Receiver& r)
+{
+	if (r.id == 2)
+	{
+		if(r.msgCount == r.MSG_COUNT_MAX_R2)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void doQueueDeallocation(Receiver& r)
+{
+	if (r.id == 1)
+	{
+		r.getMessage(2); // stalls if receiver 2 alive
+		r.terminateQueue();
+		
+	}	
+}
+
+void postCompletion(Receiver& r) // could send out 3x for r1, s257, and s997
+{
+	if (r.id == 2)
+	{
+		r.sendMessage(2);
+	}
+}
+
+void doTerminateSelf(Receiver& r)
+{
+	cout << "doTerminateSelf msgCount = " << r.msgCount << endl;
+	if (isMessageCountMax(r))
+	{
+		r.terminateSelf();
+	}	
+}
 
 /////////////////////////MAIN PROGRAM////////////////////////////////////////////////
 
 
 
 int main()
-{	 
-	bool terminated = false;
-	int msgCount = 0;
-	int current_mType = 0;
-	
+{	 	
 	// Removed IPC_EXCL since Q must be shared
 	Receiver receiver(msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600)); 
 	
 	while (receiver.senderBit != 0)
 	{
 		cout << "******senderBit = " << receiver.senderBit << endl;
-		if (receiver.senderBit % 10 == 1) // if set to send to 25x
-		{
-			if (receiver.id == 1)
-			{
-				current_mType = receiver.MTYPE_EVENT_251;
-			}
-			else if (receiver.id == 2)
-			{
-				current_mType = receiver.MTYPE_EVENT_257;
-			}
-			else
-			{
-				cout << "Error: receiver id has invalid value which neither 1 or 2." << endl;
-			}
-
-			if (receiver.getMessage(current_mType) != -1) // if 251 
-			// should only receive event and print as long as sender is active
-			{
-				cout << "Received message from " << current_mType << endl; //testing
-									
-				if (receiver.isTerminate()) // if 25x is terminating
-				{
-					receiver.senderBit--; // adjust senderBit to x0
-					
-					// testing
-					cout << "senderBit is now " << receiver.senderBit << endl; 
-				}
-				else
-				{
-					receiver.printMsg();
-				}
-			}
-			else
-			{
-				receiver.printQueueNotFoundError();
-				return 1; // message queue is gone
-			}	
-		}
 		
-		/* no longer needed?
-		else if (receiver.id == 2 && receiver.senderBit % 10 == 1) // handles messages from 257
-		{					
-			// get 257 message (does not terminate before r2)
-			receiver.getMessage(257);
-			++msgCount;
-		}
-		*/
+		process25x(receiver);
 		
+		process997(receiver);
 		
-		//// PROCESS 997 MESSAGE			
-		if (receiver.senderBit >= 10 && (msgCount < receiver.MSG_COUNT_MAX_R2 | receiver.id == 1)) // if sender 997 still alive
-		{
-			if (receiver.id == 1)
-				current_mType = receiver.MTYPE_EVENT_997;
-			else
-				current_mType = receiver.MTYPE_EVENT_1097;
-			
-			if (receiver.getMessage(current_mType) != -1) // if 997 found // should only
-			// receive event and print as long as sender is active
-			{
-				if (receiver.isTerminate()) // if 997 is terminating
-				{
-					receiver.senderBit -= 10; // adjust senderBit to 0x
-					cout << "***********senderBit is now " << receiver.senderBit << endl; // testing
-				}
-				else
-				{
-					// if message count is 5000, 257 and 997 must be told to stop
-					cout << "Sender 997 sent " << receiver.msgr.message << endl;
-					++msgCount; 
-				}
-					
-				receiver.sendAcknowledgement();				
-			}
-			else
-			{
-				receiver.printQueueNotFoundError();
-			}
-		}
-		
-		if (receiver.id == 2)
-		{
-			if(msgCount == receiver.MSG_COUNT_MAX_R2)
-			{
-				receiver.terminateSelf();
-			}
-		}
-		
+		doTerminateSelf(receiver);
 	} // end while, terminate is true
 	
 	
 	// If r1 make sure r2 is complete then deallocate queue
-	if (receiver.id == 1)
-	{
-		receiver.getMessage(2);
-		receiver.terminateQueue();
-		
-	}
+	doQueueDeallocation(receiver);
 	// If r2 send message in queue to notify r1 that r2 is complete
-	else if (receiver.id == 2)
-	{
-		receiver.sendMessage(2);
-	}
+	postCompletion(receiver);
 		
 	PTools::flushCin();
 	

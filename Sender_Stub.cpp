@@ -90,14 +90,10 @@ void Sender::setMessage(string msgIn)
 int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
 {
 	int result = 0;
-	cout << "sendMessage" << endl;
+	cout << "sendMessage with mType " << mTypeIn << endl;
 	msgr.mType = mTypeIn;
 	
-	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
-	
-	cout << "msgr.message = " << msgr.message << endl;
-	
-	cout << "msgr.getSize() = " << msgr.getSize() << endl;
+	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
 	if (strcmp(msgr.message, MSG_TERM.c_str()) == 0)
 	{
@@ -109,7 +105,12 @@ int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than 
 	if (result == -1)
 	{
 		cout << msgr.message << " did not make it into the msg queue!" << endl;
-	}		
+	}
+	else
+	{
+		cout << "Details sent: " << "mType = " << msgr.mType << ", message = " << msgr.message << endl;
+	}
+			
 	
 	// reset message
 	strcpy(msgr.message, "");
@@ -124,7 +125,7 @@ void Sender::getMessage(long mTypeIn)
 	
 	msgr.mType = mTypeIn;
 	
-	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
+	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
 	msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 0);
 	
@@ -145,7 +146,6 @@ bool Sender::terminate() // mType will be for termination calls
 	if (marker == 997)
 	{
 	
-	cout << "receiverBit = "<< receiverBit << endl;
 		if (receiverBit % 10 == 1)
 		{	
 			receiverBit -= 1;
@@ -154,8 +154,6 @@ bool Sender::terminate() // mType will be for termination calls
 		{
 			receiverBit -= 10;
 		}
-		
-		cout << "receiverBit = " << receiverBit << endl;
 	}
 	
 	//if 251 notify receiver 1
@@ -185,25 +183,6 @@ bool Sender::processNumber() // modular event will be 118
 	}
 	
 	return false;
-}
-
-bool tempConfirmContinue(Sender sendIn)
-{
-	cout << "tempConfirmContinue" << endl;
-	
-	char checkQueue; // used to control loop temporarily.
-
-	cout << "qid = " << sendIn.qid << endl;
-	
-	cout << "Do you want to send to queue again? (y/n): ";
-	cin >> checkQueue;
-	
-	if (checkQueue != 'y' & checkQueue != 'Y')
-	{
-		return false;
-	}
-	
-	return true;
 }
 
 int main()
@@ -309,7 +288,7 @@ int main()
 	
 	while(sender.receiverBit > 0)
 	{
-		//cout << "(1)receiverBit = " << sender.receiverBit << endl;
+		cout << "(1)receiverBit = " << sender.receiverBit << endl;
 		if (sender.receiverBit % 10 == 1)
 		{
 			sender.setMessage(sender.MSG_ALIVE);
@@ -318,7 +297,7 @@ int main()
 		
 		sender.generateRandomNumber();
 		
-		if (sender.event - 1 < sender.EVENT_MIN)
+		if (sender.event - 1 < sender.EVENT_MIN) //
 		{
 			sender.setMessage(sender.MSG_TERM);
 			sender.sendMessage(997);
@@ -350,9 +329,9 @@ int main()
 		
 		if (sender.receiverBit % 10 == 1) // if r2 active
 		{
-			//cout << "Polling now" << endl;
+			cout << "Polling now" << endl;
 			sender.getMessage(996);
-			//cout << "message = " << sender.msgr.message << endl;
+			cout << "message = " << sender.msgr.message << endl;
 			
 			if (strcmp(sender.msgr.message, sender.MSG_TERM.c_str()) == 0) // if message r2 term
 			{

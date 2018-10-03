@@ -16,7 +16,7 @@ class Sender
 	
 	int receiverBit; // right bit = receiver 1, left bit = receiver 2 // fix location later.
 	
-	const int EVENT_MIN = 100;	
+	const int EVENT_MIN = 100000;	
 	const string MSG_TERM = "Terminating";
 	const string MSG_ALIVE = "I am alive!";
 	
