@@ -13,6 +13,7 @@ int qid = msgget(ftok(".",'u'), IPC_EXCL|IPC_CREAT|0600); //temp statement to cr
 
 const int MSG_SIZE = sizeof(MsgPigeon) - sizeof(long);
 const std::string ALIVE_MSG = "KeepAlive";
+const int ALIVE_ID = 258;
 
 void sendMessage(std::string msgContent, long mType)
 {
@@ -26,10 +27,10 @@ void sendMessage(std::string msgContent, long mType)
 bool checkAlive()
 {
     MsgPigeon msg;
-    msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, 258, 0); // read mesg
+    msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ALIVE_ID, 0); // read mesg
     if (ALIVE_MSG.compare(msg.message) == 0)
     {
-        sendMessage(ALIVE_MSG, 258);
+        sendMessage(ALIVE_MSG, ALIVE_ID);
         return true;
     }
     return false;
@@ -39,7 +40,7 @@ int main()
 {
     std::cout << "Starting sender 257. . ." << std::endl;
     std::srand(time(NULL));
-    sendMessage(ALIVE_MSG, 258);
+    sendMessage(ALIVE_MSG, ALIVE_ID);
     //int qid = msgget(ftok(".",'u'), 0);
 
     while(checkAlive())
