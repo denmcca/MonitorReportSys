@@ -18,7 +18,6 @@ mType protocol:</br>
 	257 to receiver 2: 257</br>
 	257 to 257 and receiver 2 (polling mechanism): 256</br>
 	receiver 1 to 997: 998</br>
-	receiver 2 to 257: 258</br>
 	receiver 2 to 997: 1098</br>
 
 Polling Mechanism:
