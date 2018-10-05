@@ -35,10 +35,10 @@ Sender::Sender(int qidIn)
 {
 	cout << "qidIn = " << qidIn << endl;
 	qid = qidIn;
-	marker = numList[assignNumber()];
+	marker = 251;
 	MsgPigeon msgr;	// sends and gets values from queue
 	
-	receiverBit = 11; // for 997 where 1x is r1 and x1 is r2
+	receiverBit = 01; // for 997 where 1x is r1 and x1 is r2
 	
 	setMessage("");
 	
@@ -89,34 +89,14 @@ void Sender::setMessage(string msgIn)
 
 int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
 {
-	int result = 0;
 	cout << "sendMessage with mType " << mTypeIn << endl;
 	msgr.mType = mTypeIn;
 	
-	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
-	
-	if (strcmp(msgr.message, MSG_TERM.c_str()) == 0)
-	{
-		terminate();
-	}
-	
-	result = msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
-		
-	if (result == -1)
-	{
-		cout << msgr.message << " did not make it into the msg queue!" << endl;
-	}
-	else
-	{
-		cout << "Details sent: " << "mType = " << msgr.mType << ", message = " << msgr.message << endl;
-	}
-			
+	msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
 	
 	// reset message
 	strcpy(msgr.message, "");
 	msgr.mType = 0;
-	
-	return result;
 }
 
 void Sender::getMessage(long mTypeIn)
@@ -272,7 +252,7 @@ int main()
 	sender.sendMessage(442);
 	//*/
 	
-	//* Testing 997 to receiver 1 with loop, and event generator
+	/* Testing 997 to receiver 1 with loop, and event generator
 	
 	// Receiver 2 termination notification
 	//strcpy(sender.msgr.message, "r2 terminated!");
@@ -340,7 +320,65 @@ int main()
 			}
 		} 
 	}	
-	//*/	
+	//*/
+	
+	/* Testing 257 to receiver 2 with loop, and event generator
+	
+	// Testing message queue clean up
+	strcpy(sender.msgr.message, "junk 1");
+	sender.sendMessage(32);
+	strcpy(sender.msgr.message, "junk 2");
+	sender.sendMessage(122);
+	strcpy(sender.msgr.message, "junk 3");
+	sender.sendMessage(442); // working
+	
+	while(sender.receiverBit > 0)
+	{
+		cout << "(1)receiverBit = " << sender.receiverBit << endl;
+		if (sender.receiverBit % 10 == 1)
+		{
+			sender.setMessage(sender.MSG_ALIVE);
+			sender.sendMessage(256);
+		}
+		
+		sender.generateRandomNumber();
+		
+		sender.setMessage(sender.MSG_TERM);
+		sender.sendMessage(1097);
+		
+		if (sender.processNumber() && sender.receiverBit > 0)
+		{	
+			if (sender.receiverBit % 10 == 1)
+			{
+				sender.setMessage(std::to_string(sender.event));
+					
+				if (sender.sendMessage(1097) != -1)
+					sender.getMessage(1098);
+				else
+					break; // msg queue missing
+			}
+			
+		}
+		
+		if (sender.receiverBit % 10 == 1) // if r2 active
+		{
+			cout << "Polling now" << endl;
+			sender.getMessage(996);
+			cout << "message = " << sender.msgr.message << endl;
+			
+			if (strcmp(sender.msgr.message, sender.MSG_TERM.c_str()) == 0) // if message r2 term
+			{
+				sender.receiverBit -= 1;
+				cout << "(2)receiverBit = " << sender.receiverBit << endl;
+			}
+		} 
+	}
+	
+	//*/
+	
+	
+	
+	
 	
 	/* Testing 997 events to termination loop to both receivers
 	int test_loop_counter = 0;
@@ -438,6 +476,50 @@ int main()
 	sender.sendMessage(sender.marker);
 	sender.getMessage(-10);
 	//*/
+	
+	
+	
+	//* Testing 251 to receiver 1 with loop, and event generator
+	
+	// Testing message queue clean up
+	strcpy(sender.msgr.message, "junk 1");
+	sender.sendMessage(32);
+	strcpy(sender.msgr.message, "junk 2");
+	sender.sendMessage(122);
+	strcpy(sender.msgr.message, "junk 3");
+	sender.sendMessage(442); // working
+	
+	int count = 0;
+	sender.receiverBit = 10;
+	
+	while(sender.receiverBit > 0)
+	{		
+		sender.generateRandomNumber();
+		
+		if (sender.processNumber() && sender.receiverBit > 0)
+		{	
+			if (sender.receiverBit >= 10)
+			{
+				sender.setMessage(std::to_string(sender.event));
+					
+				sender.sendMessage(251);
+				count++;
+			}
+		}
+		
+		if (count > 50)
+		{
+			sender.setMessage("Terminating");
+			sender.sendMessage(250);
+			sender.receiverBit -= 10;
+		}
+	}
+	
+	//*/
+	
+	
+	
+	
 		
 	return 0;
 }

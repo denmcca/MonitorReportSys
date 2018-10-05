@@ -7,22 +7,24 @@
 #include <unistd.h>
 #include <string>
 #include <cstring>
-
-const char* ftok_path = ".";
-const int ftok_id = 'u';
+#include <pthread.h>
 
 using namespace std;
 
-Receiver::Receiver(int qid_in)
+Receiver::Receiver()
 {
 	// keeping track of senders. 1x represents 997, x1 represents 251 or 257	
-	senderBit = 10;
-	
-	qid = qid_in;
-	id = assignReceiverNumber();
+	senderBit = 11;
+	getQID();
+	assignReceiverNumber();
 }
 
-int Receiver::assignReceiverNumber() // prompts user for choice
+void Receiver::getQID()
+{
+	qid = msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600);
+}
+
+void Receiver::assignReceiverNumber() // prompts user for choice
 {
 	cout << "Which number do you want to assign to this receiver?\n";
 	for (int i = 0; i < idListSize; i++)
@@ -30,7 +32,7 @@ int Receiver::assignReceiverNumber() // prompts user for choice
 		cout << i + 1 << ": " << idList[i] << endl;
 	}
 	
-	return getReceiverNumber();
+	id = getReceiverNumber();
 }
 
 int Receiver::getReceiverNumber() // gets user's choice
@@ -63,6 +65,7 @@ bool Receiver::getMessage(const long& mTypeIn)
 	
 	if (msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 0) != -1)
 	{
+		//msgCount++;
 		cout << "Message found!" << endl;
 		cout << "msgr.message = " << msgr.message << endl;
 		return true;
@@ -97,7 +100,7 @@ void Receiver::setMessageType(const long& mTypeIn)
 
 bool Receiver::sendMessage(const long& mTypeIn)
 {
-	cout << "sendMessage" << endl;
+	cout << "sendMessage " << msgr.message << " to " << mTypeIn << endl;
 	
 	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << endl;
 	
@@ -151,24 +154,28 @@ void Receiver::terminateQueue()
 
 void Receiver::terminateSelf() // only receiver 2 self terminates
 {
-	if (senderBit >= 10)
+	if (id == 2)
 	{
-		cout << "Notifying 997 of Termination." << endl;
-		
-		getMessage(MTYPE_POLL_997);	// gets status message from 997
-		setMessage(MSG_TERM);	// updates status message from 997 with term. msg.
-		sendMessage(MTYPE_POLL_997);	// sends termination msg back to queue for 997 to get.
+		if (senderBit >= 10)
+		{
+			cout << "Notifying 997 of Termination." << endl;
+			senderTerminationNotification(MTYPE_POLL_997);
+		}
+		if (senderBit % 10 == 1)
+		{
+			cout << "Notifying 257 of Termination." << endl;
+			senderTerminationNotification(MTYPE_POLL_257);
+		}
 	}
-	if (senderBit % 10 == 1)
-	{
-		cout << "Notifying 25x of Termination." << endl;
-
-		getMessage(MTYPE_POLL_257);	// gets status message from 257
-		setMessage(MSG_TERM);	// updates status message from 257 with term. msg.
-		sendMessage(MTYPE_POLL_257);	// sends terminationn msg back to queue for 257 to get
-		
-	}
+	
 	senderBit = 00;
+}
+
+void Receiver::senderTerminationNotification(const long& mTypeIn)
+{		
+	getMessage(mTypeIn);	// gets status message from 257 or 997
+	setMessage(MSG_TERM);	// updates status message from 257 or 997 with term. msg.
+	sendMessage(mTypeIn);	// sends termination msg back to queue for 257 997 to receive.
 }
 
 bool Receiver::isQueueEmpty()
@@ -176,8 +183,6 @@ bool Receiver::isQueueEmpty()
 	struct msqid_ds buf_nfo;
 	
 	msgctl(qid, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
-	
-	//buf_nfo.msg_qnum = 0; // messages no longer accessible
 	
 	if (buf_nfo.msg_qnum == 0)
 	{
@@ -213,14 +218,14 @@ void Receiver::cleanUpQueue()
 	cout << "Queue is now empty." << endl;
 }
 
-void disconnectSender(Receiver& r, long marker)
+void disconnectSender(Receiver& r) // use after confirming sender terminated
 {
-	if (marker == 997)
+	if (r.msgr.mType == r.MTYPE_EVENT_997)
 	{
 		r.senderBit -= 10; // disassociates 997	
 	}
 	
-	else if (marker == 257)
+	else if (r.msgr.mType == r.MTYPE_EVENT_251)
 	{
 		r.senderBit -= 1;
 	}
@@ -231,13 +236,14 @@ void processMessage(Receiver& r)
 	if (r.isTerminate()) // if 997 is terminating
 	{
 		//r.senderBit -= 10; // adjust senderBit to 0x
-		disconnectSender(r, 997);
+		disconnectSender(r);
 		cout << "***********senderBit is now " << r.senderBit << endl; // testing
 	}
 	else
 	{
 		// if message count is 5000, 257 and 997 must be told to stop
 		r.printMsg();
+		
 		r.msgCount++; 
 	}
 }
@@ -247,42 +253,13 @@ void process25x(Receiver& r)
 	if (r.senderBit % 10 == 1) // if set to send to 25x
 	{
 		if (r.id == 1)
-		{
 			r.current_mType = r.MTYPE_EVENT_251;
-		}
-		else if (r.id == 2)
-		{
+		else
 			r.current_mType = r.MTYPE_EVENT_257;
-		}
-		else
-		{
-			cout << "Error: receiver id has invalid value which neither 1 or 2." << endl;
-		}
 
-		if (r.getMessage(r.current_mType) != -1) // if 251 
-		// should only receive event and print as long as sender is active
-		{
-			cout << "Received message from " << r.current_mType << endl; //testing
-								
-			if (r.isTerminate()) // if 25x is terminating
-			{
-				//r.senderBit--; // adjust senderBit to x0
-				disconnectSender(r, 257);
-				
-				// testing
-				cout << "senderBit is now " << r.senderBit << endl; 
-			}
-			else
-			{
-				r.printMsg();
-				++r.msgCount;
-			}
-		}
-		else
-		{
-			r.printQueueNotFoundError();
-		 	return; // message queue is gone
-		}	
+		r.getMessage(r.current_mType); // Gets message from 25x
+		
+		processMessage(r); // Checks if termination message
 	}
 }
 
@@ -290,35 +267,14 @@ void process997(Receiver& r)
 {
 	if (r.senderBit >= 10 && (r.msgCount < r.MSG_COUNT_MAX_R2 | r.id == 1)) // if sender 997 still alive
 	{
-		if (r.id == 1)
-			r.current_mType = r.MTYPE_EVENT_997;
+		if (r.id == 1) // Assigns proper receiver code (997 or 1097)
+			r.current_mType = r.MTYPE_EVENT_997; 
 		else
 			r.current_mType = r.MTYPE_EVENT_997_R2;
 		
-		/*
-		if (r.getMessage(r.current_mType) != -1) // if 997 found // should only
-		// receive event and print as long as sender is active
-		{
-			if (r.isTerminate()) // if 997 is terminating
-			{
-				//r.senderBit -= 10; // adjust senderBit to 0x
-				disconnectSender(997);
-				cout << "***********senderBit is now " << r.senderBit << endl; // testing
-			}
-			else
-			{
-				// if message count is 5000, 257 and 997 must be told to stop
-				r.printMsg();
-				r.msgCount++; 
-			}
-				
-			r.sendAcknowledgement();				
-		}
-		*/
-		
-		r.getMessage(r.current_mType);
-		processMessage(r);
-		r.sendAcknowledgement();
+		r.getMessage(r.current_mType); // Gets message from 997
+		processMessage(r); // Checks if termination message
+		r.sendAcknowledgement(); // Sends 997 ack message
 	}
 }
 
@@ -361,6 +317,81 @@ void doTerminateSelf(Receiver& r)
 	}	
 }
 
+void sendPoll(Receiver& r)
+{
+	cout << "sendPoll" << endl;
+	
+	r.setMessage(r.MSG_ALIVE);
+
+	if (r.senderBit % 10 == 1)
+	{		
+		if (r.id == 1)
+		{
+			r.sendMessage(r.MTYPE_POLL_251);
+		}
+	}
+	/*
+	if (r.senderBit >= 10)
+	{
+		r.sendMessage(r.MTYPE_POLL_997);
+	}
+	*/
+}
+
+void getPoll(Receiver& r)
+{
+	cout << "getPoll" << endl;
+	
+	if (r.senderBit % 10 == 1)
+	{	
+		if (r.id == 1)
+		{
+			r.getMessage(r.MTYPE_POLL_251);
+			
+			if (r.isTerminate())
+			{
+				--r.senderBit;
+				r.setMessage(r.MSG_TERM);
+				r.sendMessage(r.MTYPE_POLL_997);
+			}
+		}
+	}
+	/*
+	if (r.senderBit >= 10)
+	{
+		r.getMessage(r.MTYPE_POLL_997);
+		
+		if (r.isTerminate())
+		{
+			r.senderBit -= 10;
+		}
+	}
+	*/	
+}
+
+// Communicates with sender 2xx
+void startComm2xx(Receiver& r)
+{
+	while (r.senderBit % 10 == 1)
+	{
+		sendPoll(r);
+		process25x(r);
+		getPoll(r);
+	}
+}
+
+// Comunicates wtih sender 997
+void startComm997(Receiver& r)
+{ 
+	while (r.senderBit >= 10)
+	{
+		sendPoll(r);
+		process997(r); // Gets 997 message, and acknowledges	
+		doTerminateSelf(r); // If R2 reach max message then terminate
+		getPoll(r);	
+	}
+}
+
 /////////////////////////MAIN PROGRAM////////////////////////////////////////////////
 
 
@@ -368,22 +399,27 @@ void doTerminateSelf(Receiver& r)
 int main()
 {	 	
 	// Removed IPC_EXCL since Q must be shared
-	Receiver receiver(msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600)); 
+	Receiver receiver;
 	
 	while (receiver.senderBit != 0)
 	{
 		cout << "******senderBit = " << receiver.senderBit << endl;
 		
-		process25x(receiver);
+		sendPoll(receiver);
 		
-		process997(receiver);
+		process25x(receiver); // Gets 25x message
 		
-		doTerminateSelf(receiver);
+		process997(receiver); // Gets 997 message, and acknowledges
+		
+		doTerminateSelf(receiver); // If R2 reach max message then terminate
+		
+		getPoll(receiver); // gets p
+		
 	} // end while, terminate is true
-	
 	
 	// If r1 make sure r2 is complete then deallocate queue
 	doQueueDeallocation(receiver);
+	
 	// If r2 send message in queue to notify r1 that r2 is complete
 	postCompletion(receiver);
 		

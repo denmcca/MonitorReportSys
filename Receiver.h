@@ -6,17 +6,27 @@ using namespace std;
 
 class Receiver
 {
+	private:
+	const char* ftok_path = ".";
+	const int ftok_id = 'u';
+	
+	void getQID();
+	void assignReceiverNumber();	// displays prompt for user to select from ids.
+	int getReceiverNumber();	// prompts user to enter choice of ids.
+	
 	public:
 	// fields
 	const string MSG_TERM = "Terminating";	// Use when sending terminating messages or checking for term messages.
-	const string MSG_ACK = "Acknowledgement";	// Use when sending acknowledgement messages.
-	const int MSG_COUNT_MAX_R2 = 1;	// 5000 for final
+	const string MSG_ACK = "Acknowledgement";
+	const string MSG_ALIVE = "I am alive";	// Use when sending acknowledgement messages.
+	const int MSG_COUNT_MAX_R2 = 100;	// 5000 for final
 	const long MTYPE_EVENT_251 = 251;
 	const long MTYPE_EVENT_257 = 257;
 	const long MTYPE_EVENT_997 = 997;
 	const long MTYPE_EVENT_997_R2 = 1097;
 	const long MTYPE_ACK_997 = 998;
 	const long MTYPE_ACK_997_R2 = 1098;
+	const long MTYPE_POLL_251 = 250;	
 	const long MTYPE_POLL_257 = 256;
 	const long MTYPE_POLL_997 = 996;
 	
@@ -32,11 +42,10 @@ class Receiver
 	MsgPigeon msgr;	// sends and gets values from queue
 	
 	// constructor
-	Receiver(int);	// constructor with parameter for queue id
+	Receiver();	// constructor with parameter for queue id
 	
 	// functions
-	int assignReceiverNumber();	// displays prompt for user to select from ids.
-	int getReceiverNumber();	// prompts user to enter choice of ids.
+	
 	bool getMessage(const long&);	// get message from queue
 	void setMessage(const string&);	// sets message
 	void setMessageType(const long&);	// sets mType
@@ -49,4 +58,5 @@ class Receiver
 	void printMsg();	// print message from buffer	
 	void printQueueNotFoundError();	// prints error when queue not found
 	bool sendAcknowledgement();
+	void senderTerminationNotification(const long&);
 };
