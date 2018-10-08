@@ -30,7 +30,7 @@ Sender257.o:
 	g++ -c Sender257.cpp MsgPigeon.cpp
 
 Sender_Stub.o:	patch/patch64.o
-	g++ -c Sender_Stub.cpp Sender.h PTools.cpp MsgPigeon.cpp patch/patch64.o patch/get_info.h
+	g++ -c Sender_Stub.cpp Sender.h PTools.cpp MsgPigeon.cpp
 
 Receiver.o: 
 	g++ -c Receiver.cpp Receiver.h PTools.cpp MsgPigeon.cpp
