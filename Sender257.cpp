@@ -17,6 +17,8 @@ const int ALIVE_ID = 256;
 
 void sendMessage(std::string msgContent, long mType)
 {
+	std::cout << "sendMessage" << std::endl;
+	std::cout << "mType " << mType << std::endl;
     MsgPigeon msg;
 	//int size = sizeof(MsgPigeon) - sizeof(long);
     msg.mType = mType;
@@ -24,8 +26,18 @@ void sendMessage(std::string msgContent, long mType)
     msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
 }
 
+void getMessage(long mType)
+{
+	std::cout << "getMessage" << std::endl;
+	std::cout << "mType " << mType << std::endl;
+	MsgPigeon msg;
+	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, mType, 0); // read mesg
+	std::cout << "Message found." << std::endl;
+}
+
 bool checkAlive()
 {
+	std::cout << "checkAlive" << std::endl;
     MsgPigeon msg;
     msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ALIVE_ID, 0); // read mesg
     if (ALIVE_MSG.compare(msg.message) == 0)
@@ -40,16 +52,24 @@ int main()
 {
     std::cout << "Starting sender 257. . ." << std::endl;
     std::srand(time(NULL));
+    
+    sendMessage("", 259); // initialization handshake
+    getMessage(260);
+    getMessage(4);
+    
     sendMessage(ALIVE_MSG, ALIVE_ID);
     //int qid = msgget(ftok(".",'u'), 0);
 
-    while(checkAlive())
+    while(true) // checkAlive when event found instead
     {
         int random = std::rand();
         if (random % 257 == 0)
         {
             std::cout << "Event found: " << random << std::endl;
             sendMessage(std::to_string(random), 257);
+            
+            if (!checkAlive())
+            	break;
         }
         
     }

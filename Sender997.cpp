@@ -76,6 +76,7 @@ void Sender997::initQID()
 	const int ftok_id = 'u';
 	while (true)
 	{
+		cout << ".";
 		if (qid == -1)
 		{
 			qid = msgget(ftok(ftok_path,ftok_id),0);
@@ -108,11 +109,12 @@ void Sender997::runMainLoop()
 		else if ((randInt % 997) == 0)
 		{
 			string msgContent = intToString(randInt);
+			
 			sendMessage(msgContent, MTYPE_TO_R1);
 
 			// Get ackowledgement from R1
 			getMessage(MTYPE_FROM_R1);
-
+			
 			if (sendToR2)
 			{
 				sendMessage("Polling", MTYPE_R2_POLL);	
@@ -137,5 +139,12 @@ int main()
 	Sender997 snd;
 
 	snd.initQID();
+
+	snd.sendMessage("", 999); // initialization handshake
+	snd.sendMessage("", 1099);
+	snd.getMessage(1000);
+	snd.getMessage(1100);
+	snd.getMessage(4);
+	
 	snd.runMainLoop();
 }
