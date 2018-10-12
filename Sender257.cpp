@@ -73,6 +73,8 @@ int main()
         }
         
     }
+    
+	sendMessage("257 Shutting down.", 261);
     //Temporary remove for creating the message queue
     //msgctl (qid, IPC_RMID, NULL);
 }

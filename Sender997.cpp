@@ -84,7 +84,7 @@ void Sender997::initQID()
 		}
 		else
 		{
-			cin.get();
+			//cin.get();
 			cout << "qid = " << qid << endl;
 			cout << "997 found the queue! Now ready! " << endl;
 			cout << "qid = " << qid << endl;
@@ -95,6 +95,12 @@ void Sender997::initQID()
 
 void Sender997::runMainLoop()
 {
+	/*
+	if (sendToR2) // preliminary poll message 
+	{
+		sendMessage("Polling", MTYPE_R2_POLL);	
+	}
+*/
 	while (true)
 	{
 		// Generate and process random number
@@ -117,17 +123,25 @@ void Sender997::runMainLoop()
 			
 			if (sendToR2)
 			{
-				sendMessage("Polling", MTYPE_R2_POLL);	
-				sendMessage(msgContent, MTYPE_TO_R2);
-
-				// Get ackowledgement from R2
-				getMessage(MTYPE_FROM_R2);
-
 				// Get poll message from queue
-				string response = getMessage(MTYPE_R2_POLL);
-				if (response == "Terminating")
+				//string response = getMessage(MTYPE_R2_POLL);
+				// Send event to R2	
+				sendMessage(msgContent, MTYPE_TO_R2);				
+				
+				if (getMessage(MTYPE_FROM_R2) == "Terminating")
 				{
 					sendToR2 = false;
+					//getMessage(MTYPE_TO_R2); // removes previous message from queue
+					cout<< "HEREHERE";
+				}
+				else
+				{
+					// Send back poll
+					//sendMessage("Polling", MTYPE_R2_POLL);											
+					// Send event to R2
+					//sendMessage(msgContent, MTYPE_TO_R2);
+					// Get ackowledgement from R2
+					//getMessage(MTYPE_FROM_R2);
 				}
 			}
 		}
@@ -140,11 +154,13 @@ int main()
 
 	snd.initQID();
 
-	snd.sendMessage("", 999); // initialization handshake
-	snd.sendMessage("", 1099);
-	snd.getMessage(1000);
-	snd.getMessage(1100);
-	snd.getMessage(4);
+	snd.sendMessage("", 999); // initialization handshake R1
+	snd.sendMessage("", 1099); // initialization handshake R2
+	snd.getMessage(1000); // ack handshake R1
+	snd.getMessage(1100); // ack handshake R2
+	snd.getMessage(4); // final ack
 	
 	snd.runMainLoop();
+	
+	snd.sendMessage("997 Shutting down.", 1001);
 }

@@ -13,9 +13,8 @@ class Sender
 	MsgPigeon msgr;	// Sends and gets values from queue
 	int event;	// Holds last event integer generated
 	char eventMsg;	// Holds event message to be passed to queue
-	
-	int receiverBit; // right bit = receiver 1, left bit = receiver 2 // fix location later.
-	
+	MsgPigeon *exitMsgPtr;
+	bool isConnected;
 	const int EVENT_MIN = 100000;	
 	const string MSG_TERM = "Terminating";
 	const string MSG_ALIVE = "I am alive!";
@@ -28,6 +27,7 @@ class Sender
 	void getMessage(long);	// gets event (acknowledgements, termination messages)
 	bool terminate();
 	int generateRandomNumber();
+	int getMessageSize();
 	bool processNumber();	// Checks if previous event is modular to marker.
 };
 

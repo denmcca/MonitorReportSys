@@ -9,6 +9,7 @@
 #include <time.h>       
 #include <sys/types.h>
 #include <unistd.h>
+#include "patch/get_info.h"
 
 /*
 	Using as test stub for testing with Receiver program. - Dennis 
@@ -34,55 +35,13 @@ const int ftok_id = 'u';
 Sender::Sender(int qidIn)
 {
 	//cout << "qidIn = " << qidIn << endl;
+	srand(time(NULL));
 	qid = qidIn;
 	marker = 251;
-	MsgPigeon msgr;	// sends and gets values from queue
-	
-	receiverBit = 01; // for 997 where 1x is r1 and x1 is r2
+	isConnected = true;	
 	
 	setMessage("");
-	
-	srand(time(NULL));
 }
-
-/*
-int Sender::assignNumber()
-{
-	cout << "Which number do you want to assign to this sender's marker value?\n";
-	
-	for (int i = 0; i < numListSize; i++)
-	{
-		cout << i << ": " << numList[i] << endl;
-	}
-	
-	return getMarkerNumber();
-}
-
-int Sender::getMarkerNumber()
-{
-	int choice;
-	
-	while(true)
-	{
-		try
-		{
-		
-			cout << "Enter number: ";
-			cin >> choice;
-			if (!cin.good() | choice < 0 | choice > numListSize - 1)
-				throw int();
-			break;
-		} 
-		catch (int e)
-		{
-			PTools::flushCin();
-			cout << "Invalid selection!" << endl;
-		}
-	}
-	
-	return choice;
-}
-*/
 
 void Sender::setMessage(string msgIn)
 {
@@ -91,10 +50,14 @@ void Sender::setMessage(string msgIn)
 
 int Sender::sendMessage(long mTypeIn) // mTypeIn incase need to send other than marker
 {
-	//cout << "sendMessage with mType " << mTypeIn << endl;
+	cout << "sendMessage with mType " << mTypeIn << endl;
 	msgr.mType = mTypeIn;
 	
-	msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0);
+	if (msgsnd(qid, (struct msgbuf*)&msgr, msgr.getSize(), 0) == -1)
+	{
+		std::cout << "Message Queue has been Deallocated Prematurely! ";
+		cin.get();
+	}
 	
 	// reset message
 	strcpy(msgr.message, "");
@@ -116,33 +79,6 @@ void Sender::getMessage(long mTypeIn)
 	//cout << "Message = " << msgr.message << endl;
 }
 
-/*
-bool Sender::terminate() // mType will be for termination calls
-{
-	cout << "terminate" << endl;
-	// sets message to terminate when terminating.
-	setMessage(MSG_TERM);
-	
-	//if 997 notify both receivers
-	cout << "marker = " << marker << endl;
-	
-	if (marker == 997)
-	{
-	
-		if (receiverBit % 10 == 1)
-		{	
-			receiverBit -= 1;
-		}
-		if (receiverBit >= 10)
-		{
-			receiverBit -= 10;
-		}
-	}
-	
-	return true;
-}
-*/
-
 int Sender::generateRandomNumber() // how to generate 32 bit integers?
 {
 	event = rand();
@@ -162,42 +98,55 @@ bool Sender::processNumber() // modular event will be 118
 	return false;
 }
 
+int Sender::getMessageSize()
+{
+	return msgr.getSize();
+}
+
 int main()
 {		
 	Sender sender(msgget(ftok(ftok_path,ftok_id),0));
-	
 	//* Testing 251 to receiver 1 with loop, and event generator
 	
 	int count = 0;
-	sender.receiverBit = 1;
 	
 	sender.sendMessage(253); // initialization handshake
 	sender.getMessage(254);
 	sender.getMessage(4);
+	//cout<<sender.exitMsgPrt<< " " << sender.getMessageSize()<<"<<<<<"<<endl;
+	//get_info(sender.qid, (msgbuf*)sender.exitMsgPtr, sender.getMessageSize(), 251);
 	
-	while(sender.receiverBit > 0)
+	
+	
+	while(sender.isConnected)
 	{		
 		sender.generateRandomNumber();
 		
-		if (sender.processNumber() && sender.receiverBit > 0)
+		if (sender.processNumber())
 		{	
-			if (sender.receiverBit % 10 == 1)
-			{
-				sender.setMessage(std::to_string(sender.event));	
-				sender.sendMessage(251);
-				count++;
-				//std::cout << "count = " << count << std::endl;
-			}
-		}
-		
-		if (count > 10000) // Used in place of kill command
-		{
-			//sender.getMessage(251);
-			sender.setMessage("Terminating");
+
+			sender.setMessage(std::to_string(sender.event));	
 			sender.sendMessage(251);
-			--sender.receiverBit;
+			count++;
+			//std::cout << "count = " << count << std::endl;
+			//* Used in place of kill -10 command
+			if (count >= 1)
+			{
+				//sender.getMessage(251);
+				sender.setMessage("Terminating");
+				sender.sendMessage(251);
+				sender.isConnected = false;
+				cout << "Count " << count << endl;
+			}
+			//*/	
 		}
+		//std::cout << "exitMsgPtr->message: " << exitMsgPtr->message << std::endl;
+		///if (exitMsgPtr.message == "Terminate")		
 	}
+	
+	// Shutdown confirmation
+	sender.setMessage("251 Shutting down."); 
+	sender.sendMessage(255);
 	//*/	
 		
 	return 0;
