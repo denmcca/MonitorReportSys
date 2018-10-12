@@ -11,17 +11,36 @@ Discord:
 	https://discord.gg/kpNJ6pN
 
 mType protocol:</br>
-	997 sending to receiver 1: 997 </br>
+	Sending events</br>
+	251 sending to receiver 1: 251</br>
+	257 sending to receiver 2: 257</br>
+	997 sending to receiver 1: 997</br>
 	997 sending to receiver 2: 1097</br>
-	997 to 997 and receiver 2 (polling mechanism): 996</br>
-	251 to receiver 1: 251</br>
-	257 to receiver 2: 257</br>
-	257 to 257 and receiver 2 (polling mechanism): 256</br>
-	receiver 1 to 997: 998</br>
-	receiver 2 to 997: 1098</br>
+	ACKing</br>
+	reciever 1 sending acknowledgement to 997: 998</br>
+	receiver 2 sending acknowledgement to 997: 1098</br>
+	Polling</br>
+	257 sending to and receiving from receiver 2: 256</br>
+	Handshaking</br>
+	251 handshake to receiver 1: 253</br>
+	251 handshake from receiver 1: 254</br>
+	257 handshake to receiver 2: 259</br>
+	257 handshake from receiver 2: 260</br>
+	997 handshake to receiver 1: 999</br>
+	997 handshake from receiver 1: 1000</br>
+	997 handshake to receiver 2: 1099</br>
+	997 handshake from receiver 2: 1100</br>
+	receiver 2 ready notification to receiver 1: 4</br>
+	Shutting down</br>
+	251 to receiver 1 shutdown notification: 255</br>
+	257 to receiver 1 shutdown notification: 261</br>
+	997 to receiver 1 shutdown notification: 1001</br>
+	receiver 2 to receiver 1 shutdown notification: 6</br>
 
-Polling Mechanism:
-	Senders associated to receiver 2 must send a message to the queue before it processes another
+
+
+Polling Mechanism (only for Sender 257):
+	Sender257 must send a message to the queue before it processes another
 	number. As the sender processes the next number, receiver 2 upon self-termination will receive 
 	that message and change its message to "Terminating". After the sender finishes the processing
 	the number, it will then pop the message from the queue and check the content of its message.
@@ -29,15 +48,17 @@ Polling Mechanism:
 	to receiver 2, thus eliminating unnecessary messages to the queue, and potentially termination
 	of sender.
 	
-	Pseudo code:
-		while loop
-		{
-			send polling message (mType = marker - 1)
-			generate and process number
-			get polling message (mType = marker - 1)
-			if message == terminate
-				disassociate with receiver 2
-		}
+	Pseudo code for 257 only:
+		send polling message with 256
+		while R2 is connected
+			generate number
+			if number is mod 257
+				get polling message with 256
+				if message == "Terminating"
+					disconnect R2
+				else
+					send number to R2
+					send polling message			
 	
 ----------------------------------------------------------------------------------------------
 Requirements	
