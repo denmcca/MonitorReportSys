@@ -13,7 +13,7 @@ class Sender
 	MsgPigeon msgr;	// Sends and gets values from queue
 	int event;	// Holds last event integer generated
 	char eventMsg;	// Holds event message to be passed to queue
-	MsgPigeon *exitMsgPtr;
+	MsgPigeon exitMsgPtr;
 	bool isConnected;
 	const int EVENT_MIN = 100000;	
 	const string MSG_TERM = "Terminating";

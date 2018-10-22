@@ -1,6 +1,5 @@
 #include "Sender.h"
 #include <iostream>
-#include "PTools.cpp"
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <string>
@@ -9,7 +8,7 @@
 #include <time.h>       
 #include <sys/types.h>
 #include <unistd.h>
-#include "patch/get_info.h"
+#include "get_info.h"
 
 /*
 	Using as test stub for testing with Receiver program. - Dennis 
@@ -38,9 +37,9 @@ Sender::Sender(int qidIn)
 	srand(time(NULL));
 	qid = qidIn;
 	marker = 251;
+	setMessage("NO MESSAGE YET");
+	msgr.mType = 0;
 	isConnected = true;	
-	
-	setMessage("");
 }
 
 void Sender::setMessage(string msgIn)
@@ -70,7 +69,7 @@ void Sender::getMessage(long mTypeIn)
 	
 	msgr.mType = mTypeIn;
 	
-	//cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
+	cout << "qid = " << qid << ", mTypeIn = " << mTypeIn << ", event = " << event << endl;
 	
 	msgrcv(qid, (struct msgbuf*)&msgr, msgr.getSize(), mTypeIn, 0);
 	
@@ -110,11 +109,27 @@ int main()
 	
 	int count = 0;
 	
-	sender.sendMessage(253); // initialization handshake
+	////////////////////////////////////////////////////
+	// Testing patch
+				std::cout << "Here 0" << endl;
+		std::cout << "sender.exitMsgPtr.message: " << sender.exitMsgPtr.message << endl;
+
+	strcpy(sender.exitMsgPtr.message, "Terminating");
+	sender.exitMsgPtr.mType = 251;
+	get_info(sender.qid, (struct msgbuf*)&(sender.exitMsgPtr), sender.getMessageSize(), 251);	
+			std::cout << "Here" << endl;
+		std::cout << "sender.exitMsgPtr.message: " << sender.exitMsgPtr.message << endl;
+		std::cout << "&(sender.exitMsgPtr.message): " << &(sender.exitMsgPtr.message) << endl;	
+	
+	//*///////////////////////////////////////////////////
+		
+	// initialization handshaking
+	sender.sendMessage(253);
 	sender.getMessage(254);
 	sender.getMessage(4);
+
+	
 	//cout<<sender.exitMsgPrt<< " " << sender.getMessageSize()<<"<<<<<"<<endl;
-	//get_info(sender.qid, (msgbuf*)sender.exitMsgPtr, sender.getMessageSize(), 251);
 	
 	
 	
@@ -129,15 +144,23 @@ int main()
 			sender.sendMessage(251);
 			count++;
 			//std::cout << "count = " << count << std::endl;
-			//* Used in place of kill -10 command
-			if (count >= 1)
+			///// Used in place of kill -10 command
+			
+			std::cout << "Here 2" << endl;
+			std::cout << "sender.exitMsgPtr.message: " << sender.exitMsgPtr.message << endl;
+			//std::cout << "&(sender.exitMsgPtr.message): " << &(sender.exitMsgPtr.message) << endl;
+			////
+
+		/*///////
+			if (count >= 100000 && true)
 			{
 				//sender.getMessage(251);
 				sender.setMessage("Terminating");
 				sender.sendMessage(251);
 				sender.isConnected = false;
-				cout << "Count " << count << endl;
+				//cout << "Count " << count << endl;
 			}
+		/*///	
 			//*/	
 		}
 		//std::cout << "exitMsgPtr->message: " << exitMsgPtr->message << std::endl;

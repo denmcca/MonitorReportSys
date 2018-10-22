@@ -17,10 +17,7 @@ const int ALIVE_ID = 256;
 
 void sendMessage(std::string msgContent, long mType)
 {
-	std::cout << "sendMessage" << std::endl;
-	std::cout << "mType " << mType << std::endl;
     MsgPigeon msg;
-	//int size = sizeof(MsgPigeon) - sizeof(long);
     msg.mType = mType;
     strcpy(msg.message, msgContent.c_str());
     msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
@@ -28,8 +25,6 @@ void sendMessage(std::string msgContent, long mType)
 
 void getMessage(long mType)
 {
-	std::cout << "getMessage" << std::endl;
-	std::cout << "mType " << mType << std::endl;
 	MsgPigeon msg;
 	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, mType, 0); // read mesg
 	std::cout << "Message found." << std::endl;
@@ -37,7 +32,6 @@ void getMessage(long mType)
 
 bool checkAlive()
 {
-	std::cout << "checkAlive" << std::endl;
     MsgPigeon msg;
     msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ALIVE_ID, 0); // read mesg
     if (ALIVE_MSG.compare(msg.message) == 0)
