@@ -1,5 +1,4 @@
 #include <iostream>
-#include "PTools.cpp"
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <cstring>
@@ -54,7 +53,10 @@ int Sender997::generateRandomNumber()
 
 void Sender997::sendMessage(string msgContent, long mType)
 {
-	cout << "Sending message '" << msgContent << "' to mType = " << mType << endl;
+	cout << "Sending '" << msgContent << "' to Receiver ";
+	if (mType == MTYPE_FROM_R1) cout << "1\n";
+	else cout << "2\n";
+		
 	MsgPigeon msg;
 	msg.mType = mType;
 	strcpy(msg.message, msgContent.c_str());
@@ -63,10 +65,15 @@ void Sender997::sendMessage(string msgContent, long mType)
 
 string Sender997::getMessage(long mType)
 {
-	cout << "Waiting for message from mType = " << mType << endl;
+	cout << "Awaiting Acknowledgement from Receiver ";
+	if (mType == MTYPE_FROM_R1) cout << "1\n";
+	else cout << "2\n";
+	
 	MsgPigeon msg;
 	msg.mType = mType;
 	msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0);
+	cout << "Acknowledgement received!\n";
+	
 	return msg.message;
 }
 
@@ -84,10 +91,7 @@ void Sender997::initQID()
 		}
 		else
 		{
-			//cin.get();
-			cout << "qid = " << qid << endl;
 			cout << "997 found the queue! Now ready! " << endl;
-			cout << "qid = " << qid << endl;
 			break;
 		}
 	}
@@ -95,12 +99,6 @@ void Sender997::initQID()
 
 void Sender997::runMainLoop()
 {
-	/*
-	if (sendToR2) // preliminary poll message 
-	{
-		sendMessage("Polling", MTYPE_R2_POLL);	
-	}
-*/
 	while (true)
 	{
 		// Generate and process random number
@@ -123,29 +121,22 @@ void Sender997::runMainLoop()
 			
 			if (sendToR2)
 			{
-				// Get poll message from queue
-				//string response = getMessage(MTYPE_R2_POLL);
 				// Send event to R2	
 				sendMessage(msgContent, MTYPE_TO_R2);				
 				
-				if (getMessage(MTYPE_FROM_R2) == "Terminating")
-				{
-					sendToR2 = false;
-					//getMessage(MTYPE_TO_R2); // removes previous message from queue
-					cout<< "HEREHERE";
-				}
-				else
-				{
-					// Send back poll
-					//sendMessage("Polling", MTYPE_R2_POLL);											
-					// Send event to R2
-					//sendMessage(msgContent, MTYPE_TO_R2);
-					// Get ackowledgement from R2
-					//getMessage(MTYPE_FROM_R2);
-				}
+				if (getMessage(MTYPE_FROM_R2) == "Terminating") sendToR2 = false;
 			}
 		}
 	}	
+}
+
+void doHandshake(Sender997 snd)
+{
+	snd.sendMessage("", 999); // initialization handshake R1
+	snd.sendMessage("", 1099); // initialization handshake R2
+	snd.getMessage(1000); // ack handshake R1
+	snd.getMessage(1100); // ack handshake R2
+	snd.getMessage(4); // final ack	
 }
 
 int main()
@@ -153,13 +144,9 @@ int main()
 	Sender997 snd;
 
 	snd.initQID();
-
-	snd.sendMessage("", 999); // initialization handshake R1
-	snd.sendMessage("", 1099); // initialization handshake R2
-	snd.getMessage(1000); // ack handshake R1
-	snd.getMessage(1100); // ack handshake R2
-	snd.getMessage(4); // final ack
 	
+	doHandshake(snd);
+
 	snd.runMainLoop();
 	
 	snd.sendMessage("997 Shutting down.", 1001);

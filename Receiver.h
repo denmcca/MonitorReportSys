@@ -53,7 +53,6 @@ class Receiver
 	const long MTYPE_SHAKE_997_R2_ACK = 1100;
 	const long MTYPE_R2_READY = 4;
 	// Shutdown: Messages received by Receiver 1 before initiating shutdown process
-	const long MTYPE_SHUTDOWN_251 = 255;
 	const long MTYPE_SHUTDOWN_257 = 261;
 	const long MTYPE_SHUTDOWN_997 = 1001;
 	const long MTYPE_SHUTDOWN_R2 = 6;

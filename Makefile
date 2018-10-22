@@ -1,39 +1,59 @@
 all: 
+	make clean_all
+	make Receiver.out
+	make Sender251.out
+	make Sender257.out
+	make Sender997.out
 	make clean
-	make all_251_stub
 
-all_251_stub: Sender_Stub.o Receiver.o Sender257.o Sender997.o
-	g++ Sender997.o -o Sender997.out | g++ Receiver.o -o Receiver.out -pthread | g++ Sender257.o -o Sender257.out | g++ Sender_Stub.o -o Sender_Stub.out
+all_stub:
+	make clean_all 
+	make Receiver.out
+	make Sender251_Stub.out
+	make Sender257.out
+	make Sender997.out
+	make clean
 
-all_but_251: Sender257.o Sender997.o Receiver.o
-	g++ Sender997.o -o Sender997.out | g++ Receiver.o -o Receiver.out | g++ Sender257.o -o Sender257.out
-
-all_stub: Sender_Stub.o Receiver.o
-	g++ Sender_Stub.o -o Sender_Stub.out | g++ Receiver.o -o Receiver.out
-
-all_997: Sender997.o Receiver.o
-	g++ Sender997.o -o Sender997.out | g++ Receiver.o -o Receiver.out
-	
-all_257: Sender257.o Receiver.o
-	g++ Sender257.o -o Sender257.out | g++ Receiver.o -o Receiver.out
-
-output_receiver.o: Receiver.o Components.o
-	g++ Receiver.o -o Receiver.out
-
-output_sender.o: Sender_Stub.o Components.o
-	g++ Sender_Stub.o -o Sender.out
+Sender997.out: Sender997.o
+	g++ Sender997.o -o Sender997.out
 
 Sender997.o:
-	g++ -c Sender997.cpp MsgPigeon.cpp
+	g++ -c Sender997.cpp
+
+Sender257.out: Sender257.o
+	g++ Sender257.o -o Sender257.out
 
 Sender257.o:
-	g++ -c Sender257.cpp MsgPigeon.cpp
+	g++ -c Sender257.cpp
 
-Sender_Stub.o:	patch/patch64.o
-	g++ -c Sender_Stub.cpp Sender.h PTools.cpp MsgPigeon.cpp
+Sender251.out: 251_sender.o
+	g++ 251_sender.o patch64.o -o Sender251.out
+	
+Sender251.o:
+	g++ -c 251_sender.cpp
 
-Receiver.o: 
-	g++ -c Receiver.cpp Receiver.h PTools.cpp MsgPigeon.cpp
+Sender251_Stub.out: Sender_Stub.o
+	g++ Sender_Stub.o patch64.o -o Sender251_Stub.out
 
-clean:
+Sender_Stub.o:
+	g++ -c Sender_Stub.cpp
+
+Receiver.out: Receiver.o
+	g++ Receiver.o -o Receiver.out -pthread
+
+Receiver.o:
+	g++ -c Receiver.cpp
+
+clean_all:
+	mkdir temp
+	mv patch64.o ./temp/patch64.o
 	rm -f *.out *.gch *.o
+	mv ./temp/patch64.o patch64.o
+	rmdir temp
+	
+clean:
+	mkdir temp
+	mv patch64.o ./temp/patch64.o
+	rm -f *.gch *.o
+	mv ./temp/patch64.o patch64.o	
+	rmdir temp

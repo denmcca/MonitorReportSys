@@ -60,12 +60,6 @@ int Receiver::getReceiverNumber() // gets user's choice
 
 void Receiver::getMessage(const long& mTypeIn)
 {
-	//std::cout << "+getMessage" << std::endl;
-	//std::cout << "mType " << mTypeIn << std::endl;
-		
-	//struct msqid_ds buf;
-	//msgctl(qid, IPC_STAT, &buf);
-	//std::cout << "# of messages before checking: " << buf.msg_qnum << std::endl;
 	if (isThread25x())
 	{
 		msgrcv(qid, (struct msgbuf*)&msgr25x, msgr25x.getSize(), mTypeIn, 0);
@@ -390,7 +384,6 @@ void Receiver::waitForShutdownConfirmations()
 	{
 		// Messages to receive when each program shutsdown.
 		// Used to prevent premature queue deallocation.
-		//getMessage(MTYPE_SHUTDOWN_251);
 		getMessage(MTYPE_SHUTDOWN_257);
 		getMessage(MTYPE_SHUTDOWN_997);
 		getMessage(MTYPE_SHUTDOWN_R2);
@@ -509,22 +502,6 @@ int main()
 	{ 	
 		// Instantiates Receiver object
 		Receiver receiver;
-		
-		/*/////////////////////////////////
-		/// testing patch
-		receiver.getMessage(0);
-		receiver.printMsg();
-		std::cout << "Here" << std::endl;
-				
-		receiver.getMessage(0);
-		receiver.printMsg();
-		std::cout << "Here1" << std::endl;
-				
-		receiver.getMessage(0);
-		receiver.printMsg();
-		std::cout << "Here2" << std::endl;
-		//*///////////////////////////////////
-		
 		
 		// Instantiates threads
 		// Thread that handles 25x Senders
