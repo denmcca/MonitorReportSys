@@ -139,6 +139,11 @@ void doHandshake(Sender997 snd)
 	snd.getMessage(4); // final ack	
 }
 
+void alertShutdownSuccess(Sender997 snd)
+{
+	snd.sendMessage("997 Shutdown", 1001);
+}
+
 int main()
 {
 	Sender997 snd;
@@ -149,5 +154,5 @@ int main()
 
 	snd.runMainLoop();
 	
-	snd.sendMessage("997 Shutting down.", 1001);
+	alertShutdownSuccess(snd);
 }
