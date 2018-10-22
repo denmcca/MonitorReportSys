@@ -37,7 +37,7 @@ int main() {
 	int size = sizeof(msg)-sizeof(long);
 	msg.mtype = 251; // mtype for 251 sender
 	//msgbuf *exitmsg
-	string exitMsg = "Terminating 251 sender"; // exiting message
+	string exitMsg = "Terminating"; // exiting message
 	//string * exitMsgPtr = (msgbuf*)&exitMsg;
 
 //--------------------testing---------------
@@ -50,7 +50,7 @@ int main() {
 	msgsnd(qid, (struct msgbuf *)&msg, size, 0); // sending number to receiver
 	msgrcv(qid, (struct msgbuf *)&msg, size, 254, 0); // reading
 	msgrcv(qid, (struct msgbuf *)&msg, size, 4, 0); // reading
-	
+
 
 
 	msg.mtype = 251; // mtype for 251 sender
