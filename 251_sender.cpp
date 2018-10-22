@@ -45,6 +45,15 @@ int main() {
 	//get_info(int qid, msgbuf *exitmsg, int size, long mtype);
 	get_info(qid, (struct msgbuf*)&msg, size, 251);
 
+	// initialization handshaking to reciver1
+	msg.mtype = 253;
+	msgsnd(qid, (struct msgbuf *)&msg, size, 0); // sending number to receiver
+	msgrcv(qid, (struct msgbuf *)&msg, size, 254, 0); // reading
+	msgrcv(qid, (struct msgbuf *)&msg, size, 4, 0); // reading
+	
+
+
+	msg.mtype = 251; // mtype for 251 sender
 	int event = 0; // number that will be sent to receiver
 	while(true){
 //------------stuck here need to fix the greeting
