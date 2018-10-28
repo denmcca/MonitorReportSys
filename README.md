@@ -12,41 +12,30 @@ Discord:
 
 mType protocol:</br>
 	Sending events</br>
-	251 sending to receiver 1: 251</br>
-	257 sending to receiver 2: 257</br>
-	997 sending to receiver 1: 997</br>
-	997 sending to receiver 2: 1097</br>
+	251 sending to receiver 1: 9</br>
+	257 sending to receiver 2: 20</br>
+	997 sending to receiver 1: 8</br>
+	997 sending to receiver 2: 20</br>
 	ACKing</br>
-	reciever 1 sending acknowledgement to 997: 998</br>
-	receiver 2 sending acknowledgement to 997: 1098</br>
+	reciever 1 sending acknowledgement to 997: 7</br>
+	receiver 2 sending acknowledgement to 997: 17</br>
 	Polling</br>
 	257 sending to and receiving from receiver 2: 256</br>
-	Handshaking</br>
-	251 handshake to receiver 1: 253</br>
-	251 handshake from receiver 1: 254</br>
-	257 handshake to receiver 2: 259</br>
-	257 handshake from receiver 2: 260</br>
-	997 handshake to receiver 1: 999</br>
-	997 handshake from receiver 1: 1000</br>
-	997 handshake to receiver 2: 1099</br>
-	997 handshake from receiver 2: 1100</br>
-	receiver 2 ready notification to receiver 1: 4</br>
+	receiver 2 ready notification to receiver 1: 1</br>
 	Shutting down</br>
-	251 to receiver 1 shutdown notification: 255</br>
-	257 to receiver 1 shutdown notification: 261</br>
-	997 to receiver 1 shutdown notification: 1001</br>
-	receiver 2 to receiver 1 shutdown notification: 6</br>
+	receiver 2 to receiver 1 shutdown notification: 12</br>
 
 
 
 Polling Mechanism (only for Sender 257):
 	Sender257 must send a message to the queue before it processes another
-	number. As the sender processes the next number, receiver 2 upon self-termination will receive 
-	that message and change its message to "Terminating". After the sender finishes the processing
-	the number, it will then pop the message from the queue and check the content of its message.
-	If it says "Terminating", then the sender must somehow disassociate itsef from sending any more
-	to receiver 2, thus eliminating unnecessary messages to the queue, and potentially termination
-	of sender.
+	number. As the sender processes the next number, receiver 2 upon self-
+	termination will receive	the polling message and change its message to 
+	"Terminating". After the sender finishes the processing the next number, it will 
+	then pop the polling message from the message queue and check the content of its 
+	message. If it says "Terminating", then the sender must disassociate itsef from 
+	sending any further messages to receiver 2, eliminating unnecessary messages to 
+	the queue and potentially terminate itself.
 	
 	Pseudo code for 257 only:
 		send polling message with 256
