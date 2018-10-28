@@ -13,9 +13,10 @@
 using namespace std;
 
 const int ID = 997;
-const int ACK_ID = 998;
-const int R1_ID = 1;
-const int R2_ID = 2;
+const int ACK_ID_R1 = 7;
+const int ACK_ID_R2 = 17;
+const int R1_ID = 8;
+const int R2_ID = 20;
 
 string intToString (int a)
 {
@@ -42,6 +43,7 @@ public:
 Sender997::Sender997()
 {
 	qid = -1;
+	sendToR1 = true;
 	sendToR2 = true;
 	srand(time(NULL));
 }
@@ -70,18 +72,12 @@ string Sender997::getMessage(long mType)
 	cout << "Awaiting Acknowledgement from Receiver." << endl;
 	
 	MsgPigeon msg;
-	if (msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0) < 0)
-		throw int(-11);
-	cout << "Acknowledgement received from Receiver ";
-	if (msg.message.srcID == R1_ID) cout << R1_ID;
-	else cout << R2_ID;
-	cout << "!" << endl;
+	if (msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0) < 0) throw int(-11);
+	cout << "Reply received from Receiver " << msg.message.srcID << ": ";
+	cout << msg.message.message << endl;
 	
-	if (strcmp(msg.message.message, "Terminating") == 0)
-	{
-		cout << "Received Terminating message" << endl;
-		sendToR2 = false;
-	}
+	//cout << "Acknowledgement received from Receiver " << msg.message.srcID << ", message: " << msg.message.message;
+	//cout << '!' << endl << flush;
 		
 	return msg.message.message;
 }
@@ -111,7 +107,7 @@ void Sender997::runMainLoop()
 	msgsnd(qid, (struct msgbuf *)&msg, msg.getSize(), 0); // sending init call to receiver	
 	msgrcv(qid, (struct msgbuf *)&msg, msg.getSize(), ID, 0); // Starting message	
 
-	while (true)
+	while (sendToR1 | sendToR2)
 	{
 		// Generate and process random number
 		int randInt = generateRandomNumber();
@@ -119,21 +115,32 @@ void Sender997::runMainLoop()
 		{
 			sendMessage("Terminating", R1_ID);
 			if (sendToR2) sendMessage("Terminating", R2_ID);
-			cout << "Sender 997 terminated: " << randInt << endl;
-			return;
+			cout << "Terminated with " << randInt << '!' << endl;
+			sendToR1 = false;
+			sendToR2 = false;
 		}
 		else if ((randInt % 997) == 0)
 		{
 			string msgContent = intToString(randInt);	
 			sendMessage(msgContent, R1_ID);
 			// Get ackowledgement from R1
-			getMessage(ACK_ID);			
+			if (strcmp(getMessage(ACK_ID_R1).c_str(), "Terminating") == 0)
+			{
+				cout << "Received R1 Terminating message" << endl;
+				sendToR1 = false;
+				sendMessage("Terminating", R1_ID);
+			}			
 			
 			if (sendToR2)
 			{
 				// Send event to R2	
 				sendMessage(msgContent, R2_ID);
-				getMessage(ACK_ID);				
+				if (strcmp(getMessage(ACK_ID_R2).c_str(), "Terminating") == 0)
+				{
+					cout << "Received R2 Terminating message" << endl;
+					sendToR2 = false;
+					sendMessage("Terminating", R2_ID);
+				}				
 			}
 		}
 	}	

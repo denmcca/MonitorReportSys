@@ -1,8 +1,27 @@
-//static int globalReceiverId = 0; // receiver 1 and 2 run as separate programs.
+#define REC1 1
+#define REC1_GET -10
+#define REC1_ACK 7
+#define REC2 2
+#define REC2_GET 20 // Cannot use negative for R2 since R1 is using negative value
+#define REC2_ACK 17
+#define REC2_TERM 12
+#define MSG_COUNT_MAX_R2 5000
+#define S251 251
+#define S257 257
+#define S997 997
+#define S257_POLL 256
+#define QUEUE_CLEAN 0
+
 #include "MsgPigeon.cpp"
 #include <string>
-
-using namespace std;
+#include <iostream>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstring>
+#include <sys/wait.h>
+#include <stdio.h>
 
 struct ErrorCode
 {
@@ -15,9 +34,15 @@ struct ErrorCode
 
 class Receiver
 {
-	public:
+	private:
 	const char* ftok_path = ".";
 	const int ftok_id = 'u';
+	// Indicates that program is terminating
+	const std::string MSG_TERM = "Terminating";
+	// Sent to sender program that indicates when receiver has received message.
+	const std::string MSG_ACK = "Acknowledgement";
+	// Sent to sender for polling
+	const std::string MSG_ALIVE = "Alive";	
 
 	// buffer objects
 	MsgPigeon msgr;
@@ -28,30 +53,14 @@ class Receiver
 	int qid = 0;
 	// Receiver ID
 	int id = 0;
-	// Receiver 2 message count max
-	const int MSG_COUNT_MAX_R2 = 5000;
-	// Predefined functional queue messages
-	// Indicates that program is terminating
-	const string MSG_TERM = "Terminating";
-	// Sent to sender program that indicates when receiver has received message.
-	const string MSG_ACK = "Acknowledgement";
-	// Sent to sender for polling
-	const string MSG_ALIVE = "Alive";
-	// mTypes events
-	const long MTYPE_251 = 251;
-	const long MTYPE_257 = 257;
-	const long MTYPE_997 = 997;
-	// ACK also for termination
-	const long MTYPE_997_ACK = 998;
-	// Polls
-	const long MTYPE_POLL_257 = 256;
-	// Queue cleaning: Used to pop all unprocessed messages from queue before deallocation
-	const long MTYPE_QUEUE_CLEAN = 0;
+	// Receiver can still receiver but will not print messages. Keep buffer clear.
+	bool isPrinting;
+
 	// Private functions
 	void initializeQueue();
 	void assignReceiverNumber();	// displays prompt for user to select from ids.
 	int promptReceiverNumber();	// prompts user to enter choice of ids.
-	void sendMessage(const long&, const string&);	// send message to queue
+	void sendMessage(const long&, const std::string&);	// send message to queue
 	void terminateQueue();	// clean up values from queue.
 	bool isQueueEmpty();	// checks if message queue is empty
 	bool isMessageTerminating();	// checks if message received is message to terminate
@@ -61,7 +70,6 @@ class Receiver
 	void getMessage(const long&);	// get message from queue
 	void printMessage();	// print message from buffer		
 	bool processMessage();
-	int getQueueMessageCount();	
 	void terminateSelf();	
 	void sendAcknowledgement();
 	void doTerminateSelf();	
@@ -73,6 +81,9 @@ class Receiver
 	// constructor
 	Receiver();
 	// Public functions
+	void initialize();
 	int getQID();
-	void startReceiver();	
+	void startReceiver();
+	int messageQueueCount();
+	static void printError(ErrorCode, int, Receiver&);	
 };

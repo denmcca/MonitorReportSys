@@ -13,9 +13,10 @@ int qid = msgget(ftok(".",'u'), 0);
 
 const int MSG_SIZE = sizeof(MsgPigeon) - sizeof(long);
 const std::string ALIVE_MSG = "KeepAlive";
+const std::string TERM_MSG = "Terminating";
 const int ALIVE_ID = 256;
 const int ID = 257;
-const int RID = 2;
+const int RID = 20;
 
 void sendMessage(std::string msgContent, long mType)
 {
@@ -69,7 +70,10 @@ int main()
 			std::cout << "Event found: " << random << std::endl;
 			sendMessage(std::to_string(random), RID);            
 			if (!checkAlive())
+			{
+				sendMessage(TERM_MSG, RID);
 				break;
+			}
    		}
 	}
 }

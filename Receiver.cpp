@@ -1,21 +1,15 @@
-#define REC1 1
-#define REC2 2
 #include "Receiver.h"
-#include <iostream>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <string>
-#include <cstring>
-#include <sys/wait.h>
-#include <stdio.h>
 
 Receiver::Receiver()
 {
 	// keeping track of senders. 1x represents 997, x1 represents 251 or 257	
 	getFrom25x = true;
 	getFrom997 = true;
+	isPrinting = true;
+}
+
+void Receiver::initialize()
+{
 	assignReceiverNumber();
 	initializeQueue();
 }
@@ -25,16 +19,13 @@ void Receiver::initializeQueue()
 	if (id == 1) qid = msgget(ftok(ftok_path, ftok_id), IPC_CREAT | 0600);
 	else if (id == 2)
 	{	
-		std::cout << "Waiting for Receiver 1 to allocate message queue (Control-C to abort)";
+		printf("Waiting for Receiver 1 to allocate message queue (Control-C to abort)");
 		while (true)
 		{
 			qid = msgget(ftok(ftok_path, ftok_id), 0);
 			if (qid != -1) break;
 			
-			std::cout << '.';
-			std::cout.flush();
-			// Sleep only used for aesthetical purpose
-			sleep(1);
+			std::cout << '.' << std::flush; sleep(1); // Animation
 		}
 		printf("\nQueue %d found!\n", qid);
 	}
@@ -55,18 +46,22 @@ void Receiver::assignReceiverNumber()
 
 int Receiver::promptReceiverNumber() // gets user's choice
 {
-	int choice;
+	char choice;
 	
 	while(true)
 	{
-		try
-		{		
-			printf("Enter selection: ");
-			std::cin >> choice;
-			if (choice < 1 | choice > 2) throw int(choice);
-			return choice;
-		} 
-		catch (int e) { printf("%d is an invalid selection!\n", e); }
+		printf("Enter selection: ");
+		std::cin >> choice;
+		if (choice - '0' < REC1 | choice - '0' > REC2)
+		{
+			printf("%c is an invalid selection!\n", choice);
+			if (!std::cin.good())
+			{
+				std::cin.clear();
+				std::cin.ignore(INT8_MAX, '\n');
+			}
+		}
+		else	return choice - '0';
 	}
 }
 
@@ -76,34 +71,34 @@ void Receiver::getMessage(const long& mTypeIn)
 		throw ErrorCode(-11, mTypeIn);
 }
 
-void Receiver::sendMessage(const long& mTypeIn, const string& msgIn)
+void Receiver::sendMessage(const long& mTypeIn, const std::string& msgIn)
 {
-	MsgPigeon msg;
-	msg.message.srcID = id;
-	msg.mType = mTypeIn;
-	strcpy(msg.message.message, msgIn.c_str());
+	msgr.message.srcID = id;
+	msgr.mType = mTypeIn;
+	strcpy(msgr.message.message, msgIn.c_str());
 	
-	if(msgsnd(qid, (struct msgbuf *)&msg, msg.getSize(), 0) == -1)
-		throw ErrorCode(-10);
+	if(msgsnd(qid, (struct msgbuf *)&msgr, msgr.getSize(), 0) == -1)
+		throw ErrorCode(-10, (int)mTypeIn);
 }
 
 void Receiver::sendAcknowledgement()
 {
-	if (!getFrom25x) wait(0);
+	wait(0);
 
 	int fork_id;
 	fork_id = fork();
 	
 	if (fork_id == 0)
 	{
-		sendMessage(MTYPE_997_ACK, MSG_ACK);
+		if (id == REC1) sendMessage(REC1_ACK, MSG_ACK);
+		else sendMessage(REC2_ACK, MSG_ACK);
 		exit(0);
 	}
 	else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
 }
 
 bool Receiver::processMessage()
-{
+{		
 	// if 997 or 251 is terminating
 	if (isMessageTerminating()) 
 	{
@@ -111,18 +106,25 @@ bool Receiver::processMessage()
 		return true;
 	}
 	
-	if (msgr.message.srcID == MTYPE_251 | msgr.message.srcID == MTYPE_257)
-		if (!getFrom25x) return false; // junk message from Sender 251 or 257; continue
-	else if (msgr.message.srcID == MTYPE_997)
-		if (!getFrom997) return false; // junk message from Sender 997; continue
-	
-	printMessage();
-	
-	if (msgr.message.srcID == MTYPE_997) sendAcknowledgement();
-	
-	// Receiver 2 terminates at message count max
-	msgCount++;
-	return true; 
+	if (isPrinting)
+	{
+		if (msgr.message.srcID == S251 | msgr.message.srcID == S257)
+		{
+			if (!getFrom25x) return false; // junk message from Sender 251 or 257; continue
+		}
+		else if (msgr.message.srcID == S997)
+		{
+			if (!getFrom997) return false; // junk message from Sender 997; continue
+		}
+		printMessage();
+		
+		if (msgr.message.srcID == S997) sendAcknowledgement();
+		
+		// Receiver 2 terminates at message count max
+		msgCount++;
+		return true;
+	}
+	return false; 
 }
 
 bool Receiver::isMessageTerminating()
@@ -133,12 +135,12 @@ bool Receiver::isMessageTerminating()
 // Use after confirming sender terminated
 void Receiver::disconnectSender() 
 {
-	if (msgr.message.srcID == (int)MTYPE_251 | msgr.message.srcID == (int)MTYPE_257)
+	if (msgr.message.srcID == (int)S251 | msgr.message.srcID == (int)S257)
 	{	
 		// Disconnects Sender 251 or 257
 		getFrom25x = false; 
 	}
-	else if (msgr.message.srcID == (int)MTYPE_997)
+	else if (msgr.message.srcID == (int)S997)
 	{
 		// Disconnects Sender 997
 		getFrom997 = false; 	
@@ -156,15 +158,17 @@ void Receiver::printMessage()
 
 void Receiver::doQueueDeallocation()
 {
-	if (id == 1) 
+	if (id == REC1) 
 	{
-		getMessage(12);
-		
+		getMessage(REC2_TERM);		
 		terminateQueue();
 	}
-	else if (id == REC2) sendMessage(12, "Receiver 2 Terminated!");
+	else if (id == REC2)
+	{
+		sendMessage(REC2_TERM, "Receiver 2 Terminated!");
+	}
 	
-	wait(0);
+	while (wait(0) > 0);
 }
 
 void Receiver::terminateQueue()
@@ -187,7 +191,7 @@ void Receiver::terminateQueue()
 
 void Receiver::cleanUpQueue()
 {	
-	while (wait(0) > 0){}
+	while (wait(0) > 0);
 	
 	int leftOverMessages = 0;
 	int leftOver251 = 0;
@@ -197,33 +201,37 @@ void Receiver::cleanUpQueue()
 	
 	while (!isQueueEmpty()) 
 	{
-		getMessage(MTYPE_QUEUE_CLEAN);
+		getMessage(QUEUE_CLEAN);
 		
-		if (msgr.message.srcID == 251)
+		printMessage();
+		
+		if (msgr.message.srcID == S251)
 			leftOver251++;
-		else if (msgr.message.srcID == 257)
+		else if (msgr.message.srcID == S257)
 			leftOver257++;
-		else if (msgr.message.srcID == 997 && msgr.mType == 1)
+		else if (msgr.message.srcID == S997 && msgr.mType == REC1)
 			leftOver997++;
-		else if (msgr.message.srcID == 997 && msgr.mType == 2)
+		else if (msgr.message.srcID == S997 && msgr.mType == REC2)
 			leftOver997R2++;
 		
 		++leftOverMessages;
 	}
 	
-	printf("Messages removed before queue termination count: %d\n", leftOverMessages);
-	printf("251: %d, 257: %d, 997_R1: %d, 997_R2: %d\n", leftOver251, leftOver257, leftOver997, leftOver997R2);
+	printf("Messages removed before queue termination count: %d\n", 
+		leftOverMessages);
+	printf("251: %d, 257: %d, 997_R1: %d, 997_R2: %d\n", 
+		leftOver251, leftOver257, leftOver997, leftOver997R2);
 }
 
 
 bool Receiver::isQueueEmpty()
 {
-	return getQueueMessageCount() == 0;
+	return messageQueueCount() == 0;
 }
 
 void Receiver::doTerminateSelf()
 {
-	if (id == 2)
+	if (id == REC2 && isPrinting)
 	{
 		if (isMessageCountMax())
 		{
@@ -235,25 +243,24 @@ void Receiver::doTerminateSelf()
 bool Receiver::isMessageCountMax()
 {
 	if (msgCount >= MSG_COUNT_MAX_R2) return true;
-	
 	return false;
 }
 
-void Receiver::terminateSelf() // only receiver 2 self terminates
+void Receiver::terminateSelf()
 {
-
 	if (getFrom25x)
 	{
-		sendMessage(MTYPE_POLL_257, MSG_TERM);
+		getMessage(S257_POLL);
+		sendMessage(S257_POLL, MSG_TERM);
 		printf("Sent Sender 257 termination notification.\n");					
-		getFrom25x = false;
 	}
 	if (getFrom997)
 	{			
-		sendMessage(MTYPE_997_ACK, MSG_TERM);
+		sendMessage(REC2_ACK, MSG_TERM);
 		printf("Sent Sender 997 termination notification.\n");			
-		getFrom997 = false;
 	}
+	
+	isPrinting = false;
 }
 
 //Handshaking: To sync all processes
@@ -261,50 +268,46 @@ void Receiver::waitForSenders()
 {
 	if (id == REC1)
 	{
-		getMessage(id);
+		getMessage(REC1_GET);
 	}
 	if (id == REC2)
 	{
 		if (getFrom25x)
 		{
-			getMessage(id);
-			getMessage(id);
+			getMessage(REC2_GET);
+			getMessage(REC2_GET);
 		}
-		if (getFrom997) getMessage(id);
+		if (getFrom997) getMessage(REC2_GET);
 	}
 }
 
 void Receiver::notifyStart()
 {
-		std::cout << "notifyStart" << std::endl << std::flush;
 	if (id == REC1)
 	{
 		if (getFrom25x)
 		{
-			std::cout << "REC1 HERE2" << std::endl << std::flush;		
-			sendMessage(MTYPE_251, "Sender 251 Start!");
-			sendMessage(MTYPE_257, "Sender 257 Start!");
+			sendMessage(S251, "Sender 251 Start!");
+			sendMessage(S257, "Sender 257 Start!");
 		}
 		if (getFrom997) 
 		{
-			std::cout << "REC1 HERE3" << std::endl << std::flush;
-			sendMessage(MTYPE_997, "Sender 997 Start!");
+			sendMessage(S997, "Sender 997 Start!");
 		}
 	}
 	if (id == REC2) 
 	{
-			std::cout << "REC2 start!" << std::endl << std::flush;
 		sendMessage(REC1, "All Processes Ready! Start!");
 	}
 }
 
-int Receiver::getQueueMessageCount()
+int Receiver::messageQueueCount()
 {
-	return msgr.getQueueMessageCount(qid);
+	return msgr.getMessageQueueCount(qid);
 }
 
 // Prints error message when called
-void printError(ErrorCode err, int QID)
+void Receiver::printError(ErrorCode err, int QID, Receiver &r)
 {
 	// disconnectSender error
 	if (err.errorCode == -9)
@@ -329,11 +332,33 @@ void printError(ErrorCode err, int QID)
 	else if (err.errorCode == -11)
 	{
 		printf("Error (%d): getMessage Queue Not Found. (%d)\n", (int)err.errorCode, (int)err.auxCode);
-	}	
+	}
+	
+	printf("Failed with %d messages in message queue...\n", r.messageQueueCount());	
 	
 	msgctl(QID, IPC_RMID, NULL);
 	
 	printf("Press enter to continue... \n\n");
+}
+
+int Receiver::getQID() { return qid; }
+
+void Receiver::startReceiver()
+{	
+	waitForSenders();
+	notifyStart();
+	
+	while (getFrom25x | getFrom997)
+	{	
+		if (id == REC1) getMessage(-10);
+		else if (id == REC2) getMessage(20);
+		
+		if (!processMessage()) continue;
+		doTerminateSelf();
+	}
+	
+	printf("Exiting after receiving %d events.\n", msgCount);
+	doQueueDeallocation();		
 }
 
 // Clears input stream buffer
@@ -347,46 +372,30 @@ void clearCinBuffer()
 void printExitMessage()
 {
 	// Notify user that Reciever program has completed
-	printf("Program has completed... \n\n");
+	printf("Program has completed... \n");
 }
 
-int Receiver::getQID() { return qid; }
-
-void Receiver::startReceiver()
-{	
-	waitForSenders();
-	notifyStart();
-	
-	while (getFrom25x | getFrom997)
-	{	
-		getMessage(id);
-		if (!processMessage()) continue;
-		doTerminateSelf();
-	}
-	
-	printf("Exiting after receiving %d events.\n", msgCount);
-	doQueueDeallocation();		
-}
 
 int main()
 {
-	int QID;	
+	int QID;
+	Receiver r;
 
 	try
 	{ 	
 		// Instantiates Receiver object
-		Receiver r;				
+		r.initialize();				
 		QID = r.getQID();
 		r.startReceiver();	
 	}
 	catch (int qError)
 	{		
-		printError(qError, QID);
+		Receiver::printError(qError, QID, r);
 		return qError;
 	}
 	catch (ErrorCode err)
 	{
-		printError(err, QID);
+		Receiver::printError(err, QID, r);
 		return err.errorCode;
 	}
 	

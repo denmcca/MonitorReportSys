@@ -27,7 +27,7 @@ int randomDivisorNumber () {
 }
 
 int main() {
-	const int RECEIVER_ID = 1;
+	const int RECEIVER_ID = 9;
 	srand(time(NULL)); // To generate random number
 	int qid = msgget(ftok(".",'u'), 0); // generates a key value
 
@@ -42,7 +42,7 @@ int main() {
 	
 	cout << "[pid " << getpid() << ']' << endl;
 	
-	msg.mType = 2;
+	msg.mType = 20;
 	strcpy(msg.message.message, "Sender 251 Ready");
 	msg.message.srcID = 251;
 	msgsnd(qid, (struct msgbuf *)&msg, size, 0); // sending init call to receiver

@@ -15,22 +15,14 @@ struct MsgPigeon
 	long mType; // required for queue
 	InnerMsg message;
 	
-	/*
-	MsgPigeon(long mTypeIn, long srcIdIn, char *messageIn)
-	{
-		mType = mTypeIn;
-		message.srcID = srcIdIn;
-		strcpy(message.message, messageIn);
-	}*/
-	
 	int getSize() { return sizeof(MsgPigeon) - sizeof(long); }
-	int getQueueMessageLimit(int& qidIn)
+	int getMessageQueueLimit(int& qidIn)
 	{
 		struct msqid_ds buf_nfo;
 		msgctl(qidIn, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
 		return buf_nfo.msg_qbytes / getSize();
 	}
-	int getQueueMessageCount(int& qidIn)
+	int getMessageQueueCount(int& qidIn)
 	{
 		struct msqid_ds buf_nfo;	
 		msgctl(qidIn, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
@@ -38,7 +30,7 @@ struct MsgPigeon
 	}
 	bool isMessageQueueFull(int& qidIn)
 	{
-		return getQueueMessageLimit(qidIn) == getQueueMessageCount(qidIn);	
+		return getMessageQueueLimit(qidIn) == getMessageQueueCount(qidIn);	
 	}
 	
 		
