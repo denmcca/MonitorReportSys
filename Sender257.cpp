@@ -1,8 +1,8 @@
-
 #include <iostream>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <stdio.h>
 #include <string>
 #include <cstring>
 #include <random>
@@ -14,61 +14,62 @@ int qid = msgget(ftok(".",'u'), 0);
 const int MSG_SIZE = sizeof(MsgPigeon) - sizeof(long);
 const std::string ALIVE_MSG = "KeepAlive";
 const int ALIVE_ID = 256;
+const int ID = 257;
+const int RID = 2;
 
 void sendMessage(std::string msgContent, long mType)
 {
-    MsgPigeon msg;
-    msg.mType = mType;
-    strcpy(msg.message, msgContent.c_str());
-    msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
+	MsgPigeon msg;
+	msg.mType = mType;
+	msg.message.srcID = ID;
+	strcpy(msg.message.message, msgContent.c_str());
+	msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
 }
 
 void getMessage(long mType)
 {
 	MsgPigeon msg;
 	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, mType, 0); // read mesg
-	std::cout << "Message found." << std::endl;
 }
 
 bool checkAlive()
 {
-    MsgPigeon msg;
-    msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ALIVE_ID, 0); // read mesg
-    if (ALIVE_MSG.compare(msg.message) == 0)
-    {
-        sendMessage(ALIVE_MSG, ALIVE_ID);
-        return true;
-    }
-    return false;
+	MsgPigeon msg;
+	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ALIVE_ID, 0); // read mesg
+
+	if (strcmp(msg.message.message, ALIVE_MSG.c_str()) == 0)
+	{
+		sendMessage(ALIVE_MSG, ALIVE_ID);
+		return true;
+	}
+
+	return false;
 }
 
 int main()
 {
-    std::cout << "Starting sender 257. . ." << std::endl;
-    std::srand(time(NULL));
-    
-    sendMessage("", 259); // initialization handshake
-    getMessage(260);
-    getMessage(4);
-    
-    sendMessage(ALIVE_MSG, ALIVE_ID);
-    //int qid = msgget(ftok(".",'u'), 0);
+	std::cout << "Starting sender 257. . ." << std::endl;
+	std::srand(time(NULL));
 
-    while(true) // checkAlive when event found instead
-    {
-        int random = std::rand();
-        if (random % 257 == 0)
-        {
-            std::cout << "Event found: " << random << std::endl;
-            sendMessage(std::to_string(random), 257);
-            
-            if (!checkAlive())
-            	break;
-        }
-        
-    }
-    
-	sendMessage("257 Shutting down.", 261);
-    //Temporary remove for creating the message queue
-    //msgctl (qid, IPC_RMID, NULL);
+	MsgPigeon msg;	
+	msg.mType = RID;
+	strcpy(msg.message.message, "Sender 257 Ready");
+	msg.message.srcID = ID;
+	msgsnd(qid, (struct msgbuf *)&msg, MSG_SIZE, 0); // sending init call to receiver
+
+	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ID, 0); // Start message
+
+	sendMessage(ALIVE_MSG, ALIVE_ID);
+
+	while(true) // checkAlive when event found instead
+	{
+		int random = std::rand();
+		if (random % ID == 0)
+		{
+			std::cout << "Event found: " << random << std::endl;
+			sendMessage(std::to_string(random), RID);            
+			if (!checkAlive())
+				break;
+   		}
+	}
 }

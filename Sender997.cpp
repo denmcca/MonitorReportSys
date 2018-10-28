@@ -12,11 +12,10 @@
 
 using namespace std;
 
-const int MTYPE_TO_R1 = 997;
-const int MTYPE_TO_R2 = 1097;
-const int MTYPE_R2_POLL = 996;
-const int MTYPE_FROM_R1 = 998;
-const int MTYPE_FROM_R2 = 1098;
+const int ID = 997;
+const int ACK_ID = 998;
+const int R1_ID = 1;
+const int R2_ID = 2;
 
 string intToString (int a)
 {
@@ -29,6 +28,7 @@ class Sender997
 {
 public:
 	int qid;
+	bool sendToR1;
 	bool sendToR2; // initialized to "true", set to "false" after R2 terminates.
 	
 	Sender997();
@@ -54,27 +54,36 @@ int Sender997::generateRandomNumber()
 void Sender997::sendMessage(string msgContent, long mType)
 {
 	cout << "Sending '" << msgContent << "' to Receiver ";
-	if (mType == MTYPE_FROM_R1) cout << "1\n";
+	if (mType == R1_ID) cout << "1\n";
 	else cout << "2\n";
 		
 	MsgPigeon msg;
 	msg.mType = mType;
-	strcpy(msg.message, msgContent.c_str());
-	msgsnd(qid, (struct MsgPigeon *)&msg, msg.getSize(), 0);
+	msg.message.srcID = ID;
+	strcpy(msg.message.message, msgContent.c_str());
+	if(msgsnd(qid, (struct MsgPigeon *)&msg, msg.getSize(), 0) < 0)
+		throw int(-10);
 }
 
 string Sender997::getMessage(long mType)
 {
-	cout << "Awaiting Acknowledgement from Receiver ";
-	if (mType == MTYPE_FROM_R1) cout << "1\n";
-	else cout << "2\n";
+	cout << "Awaiting Acknowledgement from Receiver." << endl;
 	
 	MsgPigeon msg;
-	msg.mType = mType;
-	msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0);
-	cout << "Acknowledgement received!\n";
+	if (msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0) < 0)
+		throw int(-11);
+	cout << "Acknowledgement received from Receiver ";
+	if (msg.message.srcID == R1_ID) cout << R1_ID;
+	else cout << R2_ID;
+	cout << "!" << endl;
 	
-	return msg.message;
+	if (strcmp(msg.message.message, "Terminating") == 0)
+	{
+		cout << "Received Terminating message" << endl;
+		sendToR2 = false;
+	}
+		
+	return msg.message.message;
 }
 
 void Sender997::initQID()
@@ -84,11 +93,7 @@ void Sender997::initQID()
 	while (true)
 	{
 		cout << ".";
-		if (qid == -1)
-		{
-			qid = msgget(ftok(ftok_path,ftok_id),0);
-			cout << "qid = " << qid << endl;
-		}
+		if (qid == -1)	qid = msgget(ftok(ftok_path,ftok_id),0);
 		else
 		{
 			cout << "997 found the queue! Now ready! " << endl;
@@ -99,60 +104,55 @@ void Sender997::initQID()
 
 void Sender997::runMainLoop()
 {
+	MsgPigeon msg;	
+	msg.mType = R2_ID;
+	strcpy(msg.message.message, "Sender 997 Ready");
+	msg.message.srcID = ID;
+	msgsnd(qid, (struct msgbuf *)&msg, msg.getSize(), 0); // sending init call to receiver	
+	msgrcv(qid, (struct msgbuf *)&msg, msg.getSize(), ID, 0); // Starting message	
+
 	while (true)
 	{
 		// Generate and process random number
 		int randInt = generateRandomNumber();
 		if (randInt < 100)
 		{
-			sendMessage("Terminating", MTYPE_TO_R1);
-			if (sendToR2) sendMessage("Terminating", MTYPE_TO_R2);
-			cout << "Sender 997 terminated" << endl;
+			sendMessage("Terminating", R1_ID);
+			if (sendToR2) sendMessage("Terminating", R2_ID);
+			cout << "Sender 997 terminated: " << randInt << endl;
 			return;
 		}
 		else if ((randInt % 997) == 0)
 		{
-			string msgContent = intToString(randInt);
-			
-			sendMessage(msgContent, MTYPE_TO_R1);
-
+			string msgContent = intToString(randInt);	
+			sendMessage(msgContent, R1_ID);
 			// Get ackowledgement from R1
-			getMessage(MTYPE_FROM_R1);
+			getMessage(ACK_ID);			
 			
 			if (sendToR2)
 			{
 				// Send event to R2	
-				sendMessage(msgContent, MTYPE_TO_R2);				
-				
-				if (getMessage(MTYPE_FROM_R2) == "Terminating") sendToR2 = false;
+				sendMessage(msgContent, R2_ID);
+				getMessage(ACK_ID);				
 			}
 		}
 	}	
 }
 
-void doHandshake(Sender997 snd)
-{
-	snd.sendMessage("", 999); // initialization handshake R1
-	snd.sendMessage("", 1099); // initialization handshake R2
-	snd.getMessage(1000); // ack handshake R1
-	snd.getMessage(1100); // ack handshake R2
-	snd.getMessage(4); // final ack	
-}
-
-void alertShutdownSuccess(Sender997 snd)
-{
-	snd.sendMessage("997 Shutdown", 1001);
-}
-
 int main()
 {
 	Sender997 snd;
-
 	snd.initQID();
 	
-	doHandshake(snd);
-
-	snd.runMainLoop();
-	
-	alertShutdownSuccess(snd);
+	try 
+	{
+		snd.runMainLoop();
+	}
+	catch (int err)
+	{
+		if (err == -10)
+			cout << "getMessage error!" << endl << flush;
+		if (err == -11)
+			cout << "sendMessage error!" << endl << flush;
+	}
 }

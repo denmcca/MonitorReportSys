@@ -1,11 +1,27 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <iostream>
+#include <cstring>
+	
+struct InnerMsg
+{
+	long srcID;
+	char message[50];
+};
 
 struct MsgPigeon
 {
 	long mType; // required for queue
-	char message[50];
+	InnerMsg message;
+	
+	/*
+	MsgPigeon(long mTypeIn, long srcIdIn, char *messageIn)
+	{
+		mType = mTypeIn;
+		message.srcID = srcIdIn;
+		strcpy(message.message, messageIn);
+	}*/
 	
 	int getSize() { return sizeof(MsgPigeon) - sizeof(long); }
 	int getQueueMessageLimit(int& qidIn)
@@ -25,6 +41,29 @@ struct MsgPigeon
 		return getQueueMessageLimit(qidIn) == getQueueMessageCount(qidIn);	
 	}
 	
+		
 };
 
+/*//
+int main()
+{
 
+	MsgPigeon pigTest;
+	
+	InnerMsg innerTest;
+	
+	innerTest.srcID = 99;
+	strcpy(innerTest.message, "testing inside message");
+	
+	pigTest.mType = 22;
+	pigTest.message = innerTest;
+	
+
+	std::cout << pigTest.mType << std::endl;
+	std::cout << pigTest.message.srcID << std::endl;
+	std::cout << pigTest.message.message << std::endl;
+	
+	std::cout << "end test... ";
+	std::cin.get();
+};
+//*/

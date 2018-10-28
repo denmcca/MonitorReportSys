@@ -32,14 +32,8 @@ Sender251.out: 251_sender.o
 Sender251.o:
 	g++ -c 251_sender.cpp
 
-Sender251_Stub.out: Sender_Stub.o
-	g++ Sender_Stub.o patch64.o -o Sender251_Stub.out
-
-Sender_Stub.o:
-	g++ -c Sender_Stub.cpp
-
 Receiver.out: Receiver.o
-	g++ Receiver.o -o Receiver.out -pthread
+	g++ Receiver.o -o Receiver.out
 
 Receiver.o:
 	g++ -c Receiver.cpp
