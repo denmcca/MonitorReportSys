@@ -69,7 +69,7 @@ void Sender997::sendMessage(string msgContent, long mType)
 
 string Sender997::getMessage(long mType)
 {
-	cout << "Awaiting Acknowledgement from Receiver." << endl;
+	//cout << "Awaiting Acknowledgement from Receiver." << endl;
 	
 	MsgPigeon msg;
 	if (msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0) < 0) throw int(-11);

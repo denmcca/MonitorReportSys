@@ -1,18 +1,10 @@
 all: 
-	make clean_all
+	make clean
 	make Receiver.out
 	make Sender251.out
 	make Sender257.out
 	make Sender997.out
-	make clean
-
-all_stub:
-	make clean_all 
-	make Receiver.out
-	make Sender251_Stub.out
-	make Sender257.out
-	make Sender997.out
-	make clean
+	make clean_objects
 
 Sender997.out: Sender997.o
 	g++ Sender997.o -o Sender997.out
@@ -38,14 +30,14 @@ Receiver.out: Receiver.o
 Receiver.o:
 	g++ -c Receiver.cpp
 
-clean_all:
+clean:
 	mkdir temp
 	mv patch64.o ./temp/patch64.o
 	rm -f *.out *.gch *.o
 	mv ./temp/patch64.o patch64.o
 	rmdir temp
 	
-clean:
+clean_objects:
 	mkdir temp
 	mv patch64.o ./temp/patch64.o
 	rm -f *.gch *.o

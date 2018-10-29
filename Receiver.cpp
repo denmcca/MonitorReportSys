@@ -168,7 +168,7 @@ void Receiver::doQueueDeallocation()
 		sendMessage(REC2_TERM, "Receiver 2 Terminated!");
 	}
 	
-	while (wait(0) > 0);
+	//while (wait(0) > 0);
 }
 
 void Receiver::terminateQueue()
@@ -191,7 +191,7 @@ void Receiver::terminateQueue()
 
 void Receiver::cleanUpQueue()
 {	
-	while (wait(0) > 0);
+	//while (wait(0) > 0);
 	
 	int leftOverMessages = 0;
 	int leftOver251 = 0;

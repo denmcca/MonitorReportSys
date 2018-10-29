@@ -16,19 +16,19 @@ struct MsgPigeon
 	InnerMsg message;
 	
 	int getSize() { return sizeof(MsgPigeon) - sizeof(long); }
-	int getMessageQueueLimit(int& qidIn)
+	int getMessageQueueLimit(int &qidIn)
 	{
 		struct msqid_ds buf_nfo;
 		msgctl(qidIn, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
 		return buf_nfo.msg_qbytes / getSize();
 	}
-	int getMessageQueueCount(int& qidIn)
+	int getMessageQueueCount(int &qidIn)
 	{
 		struct msqid_ds buf_nfo;	
 		msgctl(qidIn, IPC_STAT, &buf_nfo); // buf gets queue data including number of messages
 		return buf_nfo.msg_qnum;
 	}
-	bool isMessageQueueFull(int& qidIn)
+	bool isMessageQueueFull(int &qidIn)
 	{
 		return getMessageQueueLimit(qidIn) == getMessageQueueCount(qidIn);	
 	}
