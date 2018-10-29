@@ -83,18 +83,18 @@ void Receiver::sendMessage(const long& mTypeIn, const std::string& msgIn)
 
 void Receiver::sendAcknowledgement()
 {
-	wait(0);
+	//wait(0);
 
-	int fork_id;
-	fork_id = fork();
+	//int fork_id;
+	//fork_id = fork();
 	
-	if (fork_id == 0)
-	{
+	//if (fork_id == 0)
+	//{
 		if (id == REC1) sendMessage(REC1_ACK, MSG_ACK);
 		else sendMessage(REC2_ACK, MSG_ACK);
-		exit(0);
-	}
-	else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
+	//	exit(0);
+	//}
+	//else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
 }
 
 bool Receiver::processMessage()
@@ -116,7 +116,7 @@ bool Receiver::processMessage()
 		{
 			if (!getFrom997) return false; // junk message from Sender 997; continue
 		}
-		printMessage();
+		//printMessage();
 		
 		if (msgr.message.srcID == S997) sendAcknowledgement();
 		
@@ -343,13 +343,18 @@ void Receiver::printError(ErrorCode err, int QID, Receiver &r)
 
 int Receiver::getQID() { return qid; }
 
+int MAX_MSG_COUNT = 0;
+
 void Receiver::startReceiver()
 {	
 	waitForSenders();
 	notifyStart();
 	
 	while (getFrom25x | getFrom997)
-	{	
+	{
+		if (MAX_MSG_COUNT < msgr.getMessageQueueCount(qid))
+			MAX_MSG_COUNT = msgr.getMessageQueueCount(qid);	
+		//sleep(1);
 		if (id == REC1) getMessage(-10);
 		else if (id == REC2) getMessage(20);
 		
@@ -386,7 +391,8 @@ int main()
 		// Instantiates Receiver object
 		r.initialize();				
 		QID = r.getQID();
-		r.startReceiver();	
+		r.startReceiver();
+		std::cout << "Max Count: " << MAX_MSG_COUNT << std::endl << std::flush;	
 	}
 	catch (int qError)
 	{		
