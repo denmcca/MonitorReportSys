@@ -92,19 +92,27 @@ inline void Receiver::sendMessage(const long& mTypeIn, const char* msgIn)
 
 void Receiver::sendAcknowledgementForked()
 {
-	wait(0);
+	//wait(0);
 
+<<<<<<< HEAD
 	int fork_id;
 	fork_id = fork();
 
 	if (fork_id == 0)
 	{
 		//std::cout << "REC" << id << '\n' << std::flush;
+=======
+	//int fork_id;
+	//fork_id = fork();
+	
+	//if (fork_id == 0)
+	//{
+>>>>>>> 727baec07174e375c954db5050d8989c4522b7e4
 		if (id == REC1) sendMessage(REC1_ACK, MSG_ACK);
 		else sendMessage(REC2_ACK, MSG_ACK);
-		exit(0);
-	}
-	else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
+	//	exit(0);
+	//}
+	//else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
 }
 
 inline void Receiver::sendAcknowledgement()
@@ -175,10 +183,17 @@ inline bool Receiver::processMessage()
 			std::thread t_ack(&sendAcknowledgementThreaded, this);
 			t_ack.detach();
 		}
+<<<<<<< HEAD
 
 		//if (msgr.message.srcID == S997) sendAcknowledgement();
 		//if (msgr.message.srcID == S997) sendAcknowledgementNoFork();
 
+=======
+		//printMessage();
+		
+		if (msgr.message.srcID == S997) sendAcknowledgement();
+		
+>>>>>>> 727baec07174e375c954db5050d8989c4522b7e4
 		// Receiver 2 terminates at message count max
 		msgCount++;
 		return true;
@@ -408,6 +423,32 @@ void Receiver::printError(ErrorCode err, int QID, Receiver &r)
 
 int Receiver::getQID() { return qid; }
 
+<<<<<<< HEAD
+=======
+int MAX_MSG_COUNT = 0;
+
+void Receiver::startReceiver()
+{	
+	waitForSenders();
+	notifyStart();
+	
+	while (getFrom25x | getFrom997)
+	{
+		if (MAX_MSG_COUNT < msgr.getMessageQueueCount(qid))
+			MAX_MSG_COUNT = msgr.getMessageQueueCount(qid);	
+		//sleep(1);
+		if (id == REC1) getMessage(-10);
+		else if (id == REC2) getMessage(20);
+		
+		if (!processMessage()) continue;
+		doTerminateSelf();
+	}
+	
+	printf("Exiting after receiving %d events.\n", msgCount);
+	doQueueDeallocation();		
+}
+
+>>>>>>> 727baec07174e375c954db5050d8989c4522b7e4
 // Clears input stream buffer
 void clearCinBuffer()
 {
@@ -435,6 +476,10 @@ int main()
 		r.initialize();
 		QID = r.getQID();
 		r.startReceiver();
+<<<<<<< HEAD
+=======
+		std::cout << "Max Count: " << MAX_MSG_COUNT << std::endl << std::flush;	
+>>>>>>> 727baec07174e375c954db5050d8989c4522b7e4
 	}
 	catch (int qError)
 	{
