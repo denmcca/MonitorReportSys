@@ -18,6 +18,7 @@ const int ACK_ID_R2 = 30;
 const int R1_ID = 2;
 const int R2_ID = 20;
 
+// Converts an int to a string
 string intToString (int a)
 {
 	ostringstream temp;
@@ -48,11 +49,13 @@ Sender997::Sender997()
 	srand(time(NULL));
 }
 
+// Generate a random 32-bit int
 int Sender997::generateRandomNumber()
 {
 	return rand();
 }
 
+// Sends a message to the queue with the given content and mtype.
 void Sender997::sendMessage(string msgContent, long mType)
 {
 	cout << "Sending '" << msgContent << "' to Receiver ";
@@ -69,6 +72,8 @@ void Sender997::sendMessage(string msgContent, long mType)
 
 int ACK_COUNT_R1 = 0;
 int ACK_COUNT_R2 = 0;
+// Receives a message from the queue with the given mtype.
+// Returns the message.
 string Sender997::getMessage(long mType)
 {
 	MsgPigeon msg;
@@ -78,6 +83,7 @@ string Sender997::getMessage(long mType)
 	return msg.message.message;
 }
 
+// Initilize the qid for Sender997.
 void Sender997::initQID()
 {
 	const char* ftok_path = ".";
@@ -94,6 +100,8 @@ void Sender997::initQID()
 	}
 }
 
+// Run the main loop of Sender 997.
+// Generate random numbers and send events to R1 and R2.
 void Sender997::runMainLoop()
 {
 	MsgPigeon msg;
