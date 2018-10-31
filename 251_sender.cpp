@@ -21,7 +21,7 @@ int randomDivisorNumber () {
 	int number = 0;
 	while(event != 0){
 		number = rand();
-		event = number%251;
+		event = number%(251);
 	}
 	return number;
 }
@@ -54,14 +54,14 @@ int main() {
 	while(true){
 		event = randomDivisorNumber(); // number divisor by 251
 		string message = to_string(event); //converting number to string
-		cout << "[pid " << getpid() << "] Sending message: " << message << endl << flush;
+		cout << "[pid " << getpid() << "] Sending message: " << message << endl;
 
 		strcpy(msg.message.message, message.c_str()); //converts string to char		
 		msg.mType = RECEIVER_ID;
 		msg.message.srcID = 251;
 		if (msgsnd(qid, (struct msgbuf *)&msg, size, 0) < 0) // sending number to receiver
 		{
-			cout << "Queue terminated prematurely!" << endl << flush;
+			cout << "Queue terminated prematurely!" << endl;
 			return -1;
 		}
 	}

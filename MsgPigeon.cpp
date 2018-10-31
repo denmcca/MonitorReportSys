@@ -6,8 +6,9 @@
 	
 struct InnerMsg
 {
-	long srcID;
-	char message[50];
+	int srcID;
+	char message[20];
+	//int message;
 };
 
 struct MsgPigeon
@@ -32,8 +33,6 @@ struct MsgPigeon
 	{
 		return getMessageQueueLimit(qidIn) == getMessageQueueCount(qidIn);	
 	}
-	
-		
 };
 
 /*//
