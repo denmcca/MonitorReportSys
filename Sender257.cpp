@@ -9,7 +9,6 @@
 #include "MsgPigeon.cpp"
 
 int qid = msgget(ftok(".",'u'), 0);
-//int qid = msgget(ftok(".",'u'), IPC_EXCL|IPC_CREAT|0600); //temp statement to create msg queue
 
 const int MSG_SIZE = sizeof(MsgPigeon) - sizeof(long);
 const std::string ALIVE_MSG = "KeepAlive";
@@ -18,6 +17,7 @@ const int ALIVE_ID = 256;
 const int ID = 257;
 const int RID = 20;
 
+//Function that sends a message with specified content and mtype to the message queue
 void sendMessage(std::string msgContent, long mType)
 {
 	MsgPigeon msg;
@@ -28,12 +28,16 @@ void sendMessage(std::string msgContent, long mType)
 	//printf("Sending %s to channel %d\n",msg.message.message, msg.mType);
 }
 
+//Function to read a single message of an mtype from the message queue
 void getMessage(long mType)
 {
 	MsgPigeon msg;
 	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, mType, 0); // read mesg
 }
 
+//Function that leaves a message in the queue that determines whether Sender257 should exit or not
+//If the message is modified by Receiver 2, it will return false. If it is not modified, the message
+//is put back into the queue and the function returns true.
 bool checkAlive()
 {
 	MsgPigeon msg;
@@ -47,6 +51,7 @@ bool checkAlive()
 
 	return false;
 }
+
 
 int main()
 {
@@ -65,12 +70,19 @@ int main()
 
 	while(true) // checkAlive when event found instead
 	{
-		int random = std::rand();
+		int random = std::rand(); //Generate a random number representing an 'event' and check if it is divisible by 257
 		if (random % ID == 0)
 		{
+<<<<<<< HEAD
 			std::cout << "Event found: " << random << std::endl << std::flush;
 			sendMessage(std::to_string(random), RID);
 			if (!checkAlive())
+=======
+			//If an event is found, report it
+			std::cout << "Event found: " << random << std::endl;
+			sendMessage(std::to_string(random), RID);            
+			if (!checkAlive()) //Call checkAlive to see if Receiver 2 is still around. If it isn't, exit sender 257
+>>>>>>> aee4432ff4590b2afd06e8357541868a230bbc42
 			{
 				// If poll message is terminate then send terminate message back
 				sendMessage(TERM_MSG, RID);
