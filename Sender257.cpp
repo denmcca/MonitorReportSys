@@ -25,6 +25,7 @@ void sendMessage(std::string msgContent, long mType)
 	msg.message.srcID = ID;
 	strcpy(msg.message.message, msgContent.c_str());
 	msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
+	//printf("Sending %s to channel %d\n",msg.message.message, msg.mType);
 }
 
 void getMessage(long mType)
@@ -52,14 +53,14 @@ int main()
 	std::cout << "Starting sender 257. . ." << std::endl;
 	std::srand(time(NULL));
 
-	MsgPigeon msg;	
+	MsgPigeon msg;
 	msg.mType = RID;
 	strcpy(msg.message.message, "Sender 257 Ready");
 	msg.message.srcID = ID;
-	msgsnd(qid, (struct msgbuf *)&msg, MSG_SIZE, 0); // sending init call to receiver
-
+	std::cout << "Waiting for message queue...\n" << std::flush;
+	while(msgsnd(qid, (struct msgbuf *)&msg, MSG_SIZE, 0) < 0); // sending init call to receiver
 	msgrcv(qid, (struct msgbuf *)&msg, MSG_SIZE, ID, 0); // Start message
-
+	// Sending preliminary poll message
 	sendMessage(ALIVE_MSG, ALIVE_ID);
 
 	while(true) // checkAlive when event found instead
@@ -67,13 +68,16 @@ int main()
 		int random = std::rand();
 		if (random % ID == 0)
 		{
-			std::cout << "Event found: " << random << std::endl;
-			sendMessage(std::to_string(random), RID);            
+			std::cout << "Event found: " << random << std::endl << std::flush;
+			sendMessage(std::to_string(random), RID);
 			if (!checkAlive())
 			{
+				// If poll message is terminate then send terminate message back
 				sendMessage(TERM_MSG, RID);
 				break;
 			}
    		}
 	}
+
+	std::cout << "Sender 257 has finished!\n";
 }

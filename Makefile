@@ -25,7 +25,7 @@ Sender251.o:
 	g++ -c 251_sender.cpp
 
 Receiver.out: Receiver.o
-	g++ Receiver.o -o Receiver.out
+	g++ Receiver.o -o Receiver.out -pthread -std=c++11
 
 Receiver.o:
 	g++ -c Receiver.cpp
