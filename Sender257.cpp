@@ -25,7 +25,6 @@ void sendMessage(std::string msgContent, long mType)
 	msg.message.srcID = ID;
 	strcpy(msg.message.message, msgContent.c_str());
 	msgsnd(qid, (struct MsgPigeon *)&msg, MSG_SIZE, 0);
-	//printf("Sending %s to channel %d\n",msg.message.message, msg.mType);
 }
 
 void getMessage(long mType)

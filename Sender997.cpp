@@ -71,9 +71,6 @@ int ACK_COUNT_R1 = 0;
 int ACK_COUNT_R2 = 0;
 string Sender997::getMessage(long mType)
 {
-
-	////////////////////////////if (mType == ACK_ID_R1) cout << "Getting ACK #" << ++ACK_COUNT_R1 << " from " << mType << endl << flush;
-	////////////////////////////////else cout << "Getting ACK #" << ++ACK_COUNT_R2 << " from " << mType << endl << flush;
 	MsgPigeon msg;
 	if (msgrcv(qid, (struct msgbuf*)&msg, msg.getSize(), mType, 0) < 0) throw int(-11);
 	cout << "Reply received from Receiver " << msg.message.srcID << ": ";
@@ -88,7 +85,6 @@ void Sender997::initQID()
 	cout << "Waiting for message queue..";
 	while (true)
 	{
-		//cout << "." << flush; sleep(1); // Causes
 		if (qid == -1)	qid = msgget(ftok(ftok_path,ftok_id),0);
 		else
 		{
@@ -111,7 +107,7 @@ void Sender997::runMainLoop()
 	{
 		// Generate and process random number
 		int randInt = generateRandomNumber();
-		if (randInt < 5)
+		if (randInt < 100)
 		{
 			sendMessage("Terminating", R1_ID);
 			if (sendToR2) sendMessage("Terminating", R2_ID);
@@ -151,7 +147,6 @@ int main()
 {
 	Sender997 snd;
 	snd.initQID();
-	cout << "qid == " << snd.qid << endl << flush;
 
 	try
 	{

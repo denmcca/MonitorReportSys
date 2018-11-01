@@ -12,16 +12,18 @@ Discord:
 
 mType protocol:</br>
 	Sending events</br>
-	251 sending to receiver 1: 9</br>
+	251 sending to receiver 1: 1</br>
 	257 sending to receiver 2: 20</br>
-	997 sending to receiver 1: 8</br>
+	997 sending to receiver 1: 2</br>
 	997 sending to receiver 2: 20</br>
+	Receiver 1 to get 251 and 997: -2</br>
+	Receiver 2 to get 257 and 997: 20</br>
 	ACKing</br>
-	reciever 1 sending acknowledgement to 997: 7</br>
-	receiver 2 sending acknowledgement to 997: 17</br>
+	reciever 1 sending acknowledgement to 997: 3</br>
+	receiver 2 sending acknowledgement to 997: 30</br>
 	Polling</br>
 	257 sending to and receiving from receiver 2: 256</br>
-	receiver 2 ready notification to receiver 1: 1</br>
+	receiver 2 ready notification to receiver 1: 11</br>
 	Shutting down</br>
 	receiver 2 to receiver 1 shutdown notification: 12</br>
 

@@ -64,7 +64,7 @@ private:
 	bool isPrinting; // If true, prints received messages. Else, do not print.
 
 	// Attributes
-	const int MSG_COUNT_MAX_R2 = 5000000; // Receiver 2's max message to receive.
+	const int MSG_COUNT_MAX_R2 = 5000; // Receiver 2's max message to receive.
 	int msgCount;
 	int msgSize = 0; // Size of buf object / message object
 	int qid = 0; // Message queue ID
