@@ -1,14 +1,8 @@
 #include "MsgPigeon.cpp"
-#include <string>
-#include <iostream>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <cstring>
-#include <sys/wait.h>
-#include <stdio.h>
-#include <thread>
 
 /**
 	Struct object used to throw error codes from Receiver class to an awaiting
@@ -77,7 +71,6 @@ private:
 	void getMessage(const long&);	// get message from message queue.
 	void sendMessage(const long&, const char*);	// send message to queue.
 	void sendAcknowledgement(); // passes ack message and mtype to sendMessage.
-	void static sendAcknowledgementThreaded(Receiver* r); // used to create thread specifically for threading acks (fast).
 	void printMessage();	// print message from received from message queue.
 	bool processMessage(); // decides what to do with message from queue.
 	bool isMessageCountMax(); // checks if message count has reached maximum value for receiver 2.

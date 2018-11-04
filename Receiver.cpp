@@ -1,5 +1,6 @@
 #include "Receiver.h"
-#include <thread>
+#include <iostream>
+#include <cstring>
 
 // debugging: keeps track of highest number of messages inside queue.
 int MAX_QUEUE_COUNT = 0;
@@ -116,15 +117,6 @@ inline void Receiver::sendMessage(const long &mTypeIn, const char *msgIn)
 
 	if(msgsnd(qid, (struct msgbuf *)&msgr, msgSize, 0) == -1)
 		throw ErrorCode(-10, (int)mTypeIn);
-}
-
-/**
-	Creates a thread for acknowledgements to prevent system from locking up
-	@param r Receiver pointer required to pass values to static function.
-*/
-inline void Receiver::sendAcknowledgementThreaded(Receiver* r)
-{
-	r->sendAcknowledgement();
 }
 
 /*
