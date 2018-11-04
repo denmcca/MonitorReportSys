@@ -82,7 +82,7 @@ void Sender997::initQID()
 {
 	const char* ftok_path = ".";
 	const int ftok_id = 'u';
-	cout << "Waiting for message queue..";
+	cout << "Waiting for message queue...\n";
 	while (true)
 	{
 		if (qid == -1)	qid = msgget(ftok(ftok_path,ftok_id),0);
@@ -111,7 +111,7 @@ void Sender997::runMainLoop()
 		{
 			sendMessage("Terminating", R1_ID);
 			if (sendToR2) sendMessage("Terminating", R2_ID);
-			cout << "Terminated with " << randInt << '!' << endl;
+			cout << "Terminated with event " << randInt << '!' << endl;
 			sendToR1 = false;
 			sendToR2 = false;
 		}

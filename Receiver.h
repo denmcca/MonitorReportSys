@@ -61,7 +61,7 @@ private:
 
 	// Flags
 	bool getFrom25x, getFrom997; // If true, get message from Sender. Else, do not.
-	bool isPrinting; // If true, prints received messages. Else, do not print.
+	bool isAccepting; // If true, completely processes received messages. Else, do not process.
 
 	// Attributes
 	const int MSG_COUNT_MAX_R2 = 5000; // Receiver 2's max message to receive.
@@ -74,24 +74,23 @@ private:
 	void initializeQueue(); // initializes message queue.
 	void assignReceiverNumber();	// displays prompt for user to select from ids.
 	int promptReceiverNumber();	// prompts user to enter choice of ids.
+	void getMessage(const long&);	// get message from message queue.
 	void sendMessage(const long&, const char*);	// send message to queue.
-	void terminateQueue();	// clean up values from queue.
+	void sendAcknowledgement(); // passes ack message and mtype to sendMessage.
+	void static sendAcknowledgementThreaded(Receiver* r); // used to create thread specifically for threading acks (fast).
+	void printMessage();	// print message from received from message queue.
+	bool processMessage(); // decides what to do with message from queue.
+	bool isMessageCountMax(); // checks if message count has reached maximum value for receiver 2.
+	void terminateSelf();	// function which sends messages to active senders indicating that receiver is terminating.
+	void doTerminateSelf(); // receiver 2's termination check.
+	void doQueueDeallocation(); // removes message queue.
 	bool isQueueEmpty();	// checks if message queue is empty.
 	bool isMessageTerminating();	// checks if message received is message to terminate.
 	void disconnectSender();	// stops receiver from sending and getting messages from sender, returns sender disconnected.
 	void cleanUpQueue();	// removes messages with mtypes for which receiver is responsible.
-	bool isMessageCountMax(); // checks if message count has reached maximum value for receiver 2.
-	void getMessage(const long&);	// get message from message queue.
-	void printMessage();	// print message from received from message queue.
-	bool processMessage(); // decides what to do with message from queue.
-	void terminateSelf();	// function which sends messages to active senders indicating that receiver is terminating.
-	void sendAcknowledgement(); // passes ack message and mtype to sendMessage.
-	void static sendAcknowledgementThreaded(Receiver* r); // used to create thread specifically for threading acks (fast).
-	void sendAcknowledgementForked(); // alternative method to branch acknowledgements prevent lock ups (slow).
-	void doTerminateSelf(); // receiver 2's termination check.
-	void doQueueDeallocation(); // removes message queue.
 	void notifyStart(); // Receiver 2 notifies Receiver 1. Receiver 1 notifies Senders.
 	void waitForSenders(); // Receiver 2 waits for Senders. Receiver 1 waits for Receiver 2.
+	void terminateQueue();	// clean up values from queue.
 
 public:
 	// constructor
@@ -102,5 +101,5 @@ public:
 	int getQID(); // returns message queue id.
 	void startReceiver(); // starts main program loop.
 	int messageQueueCount(); // returns number of messages inside message queue.
-	static void printError(ErrorCode, int, Receiver&); // prints error messages.
+	void printError(ErrorCode); // prints error messages.
 };

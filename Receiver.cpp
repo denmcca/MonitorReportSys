@@ -12,13 +12,14 @@ Receiver::Receiver()
 	// keeping track of senders. 1x represents 997, x1 represents 251 or 257
 	getFrom25x = true;
 	getFrom997 = true;
-	isPrinting = true;
+	isAccepting = true;
 	msgCount = 0;
 	msgSize = msgr.getSize();
 }
 
 /**
-	Function which calls functions to assign id and allocate or connect to message queue.
+	Function which calls functions to assign id and allocate or connect to message
+	queue.
 */
 void Receiver::initialize()
 {
@@ -47,7 +48,9 @@ void Receiver::initializeQueue()
 	else	throw ErrorCode(3, id); // Unexpected receiver ID
 }
 
-// Prompts user for choice
+/**
+	Prompts user with receiver choices then calls function to get input.
+*/
 void Receiver::assignReceiverNumber()
 {
 	printf("Which receiver do you want to activate?\n");
@@ -59,6 +62,10 @@ void Receiver::assignReceiverNumber()
 	id = promptReceiverNumber();
 }
 
+/**
+	Prompts user for receiver selection input.
+	@return integer which represents user's choice.
+*/
 int Receiver::promptReceiverNumber() // gets user's choice
 {
 	char choice;
@@ -76,50 +83,54 @@ int Receiver::promptReceiverNumber() // gets user's choice
 				std::cin.ignore(INT8_MAX, '\n');
 			}
 		}
-		else	return choice - '0';
+		else return choice - '0';
 	}
 }
 
+/**
+	Gets receiver's ID number.
+	@return integer value that indicates receiver number.
+*/
 inline int Receiver::getID() { return id; }
 
+/**
+	Receives message object from message queue.
+	@param id Message type number that is used to retrieve specific message mTypes
+	from message queue.
+*/
 inline void Receiver::getMessage(const long &mTypeIn)
 {
 	if (msgrcv(qid, (struct msgbuf *)&msgr, msgSize, mTypeIn, 0) == -1)
 		throw ErrorCode(-11, mTypeIn);
 }
 
+/**
+	Sends message object to message queue.
+	@param mTypeIn Message type that sets the message's mtype value.
+*/
 inline void Receiver::sendMessage(const long &mTypeIn, const char *msgIn)
 {
-	//msgr.message.srcID = id;
-	//msgr.mType = mTypeIn;
-	//strcpy(msgr.message.message, msgIn);
+	msgr.message.srcID = id;
+	msgr.mType = mTypeIn;
+	strcpy(msgr.message.message, msgIn);
 
-	MsgPigeon msg;
-	msg.mType = mTypeIn;
-	msg.message.srcID = id;
-	strcpy(msg.message.message, msgIn);
-
-	if(msgsnd(qid, (struct msgbuf *)&msg, msgSize, 0) == -1)
+	if(msgsnd(qid, (struct msgbuf *)&msgr, msgSize, 0) == -1)
 		throw ErrorCode(-10, (int)mTypeIn);
 }
 
-void Receiver::sendAcknowledgementForked()
+/**
+	Creates a thread for acknowledgements to prevent system from locking up
+	@param r Receiver pointer required to pass values to static function.
+*/
+inline void Receiver::sendAcknowledgementThreaded(Receiver* r)
 {
-	wait(0);
-
-	int fork_id;
-	fork_id = fork();
-
-	if (fork_id == 0)
-	{
-		//std::cout << "REC" << id << '\n' << std::flush;
-		if (id == REC1) sendMessage(REC1_ACK, MSG_ACK);
-		else sendMessage(REC2_ACK, MSG_ACK);
-		exit(0);
-	}
-	else if (fork_id < 0) throw (ErrorCode(-8, fork_id));
+	r->sendAcknowledgement();
 }
 
+/*
+	Sets and sents a message object to sendMessage function to send an
+	acknowledgement to Sender 997 after it sends an event.
+*/
 inline void Receiver::sendAcknowledgement()
 {
 	if (id == REC1)
@@ -130,23 +141,12 @@ inline void Receiver::sendAcknowledgement()
 	sendMessage(REC2_ACK, MSG_ACK);
 }
 
+/**
+	Establishes syncronization between programs, sets main loop into action. After
+	main loop is completed functions to deallocate message queue are called.
+*/
 void Receiver::startReceiver()
 {
-	/*std::cout << msgr.getMessageQueueLimit(qid) << std::endl << std::flush;
-	sendMessage(3, "test3");
-	sendMessage(1, "test");
-	sendMessage(2, "test2");
-	sendMessage(6, "test6");
-	sendMessage(7, "test7");
-	sendMessage(4, "test4");
-	sendMessage(5, "test5");
-	getMessage(-7);
-	printMessage();
-	std::cout << "Test\n" << std::flush;
-
-	std::cin.ignore(INT8_MAX, '\n');
-	std::cin.get();*/
-	// Proves that msgrcv with negative number prioritizes lowest numbered mType in msg queue
 	if (id == REC1) printf("Message Queue Limit: %d messages\n",
 		msgr.getMessageQueueLimit(qid));
 
@@ -160,23 +160,23 @@ void Receiver::startReceiver()
 
 		if (!processMessage()) continue;
 		doTerminateSelf();
-		//sleep(1);
 	}
-
-	//printf("Exiting after receiving %d events.\n", msgCount);
 	doQueueDeallocation();
 }
 
-
-inline void Receiver::sendAcknowledgementThreaded(Receiver *r)
-{
-	r->sendAcknowledgement();
-}
-
+/**
+	Determines what to do with received message. If message is to terminate, Receiver
+	will disassociate itself from sender. If message is an event, count will be
+	incremented. If message is from Sender 997 then ACK will be sent.
+	@return False if message was not an event, or if receiver is no long receiving
+	events from sender. True if message is an event from a sender with which it is still
+	assoicated.
+*/
 inline bool Receiver::processMessage()
 {
 	if (MAX_QUEUE_COUNT < msgr.getMessageQueueCount(qid))
 		MAX_QUEUE_COUNT = msgr.getMessageQueueCount(qid);
+
 	// if 997 or 251 is terminating
 	if (isMessageTerminating())
 	{
@@ -184,29 +184,18 @@ inline bool Receiver::processMessage()
 		return true;
 	}
 
-	if (isPrinting)
+	if (isAccepting)
 	{
-		////////////////////std::cout << msgr.mType << std::endl << std::flush;
-		//printMessage();
 		if (msgr.message.srcID == S251 | msgr.message.srcID == S257)
-		//if (msgr.mType < -REC1_GET) /// <----- WHY DOESN'T THIS WORK????
 		{
 			if (!getFrom25x) return false; // junk message from Sender 251 or 257; continue
 		}
 		else if (msgr.message.srcID == S997)
-		//else if (msgr.mType == 20)
 		{
 			if (!getFrom997) return false; // junk message from Sender 997; continue
-			//sendAcknowledgementForked();
-			//sendAcknowledgement();
-
-			std::thread t_ack(&sendAcknowledgementThreaded, this);
-			t_ack.detach();
+			sendAcknowledgement();
 		}
 		else throw(ErrorCode(-7, msgr.mType));
-
-		//if (msgr.message.srcID == S997) sendAcknowledgement();
-		//if (msgr.message.srcID == S997) sendAcknowledgementNoFork();
 
 		// Receiver 2 terminates at message count max
 		msgCount++;
@@ -215,38 +204,50 @@ inline bool Receiver::processMessage()
 	return false;
 }
 
+/**
+	Checks message received has terminating message.
+	@return True if contains terminating message. False if does not.
+*/
 inline bool Receiver::isMessageTerminating()
 {
 	return strcmp(msgr.message.message, MSG_TERM) == 0;
 }
 
-// Use after confirming sender terminated
+/**
+	Disassociates sender from receiver.
+*/
 void Receiver::disconnectSender()
 {
 	if (msgr.message.srcID == S251 | msgr.message.srcID == S257)
 	{
 		// Disconnects Sender 251 or 257
 		getFrom25x = false;
-		//printf("Disconnected Sender %d\n", msgr.message.srcID);
 	}
 	else if (msgr.message.srcID == S997)
 	{
 		// Disconnects Sender 997
 		getFrom997 = false;
-		//printf("Disconnected Sender %d\n", msgr.message.srcID);
 	}
 	 // disconnectSender received unexcepted srcID
 	else throw ErrorCode(-9, msgr.message.srcID);
 }
 
+/**
+	Prints message content from message object. No longer used to speed up
+	processing speed.
+*/
 void Receiver::printMessage()
 {
 	printf("Sender %d sent: %s\n", (int)msgr.message.srcID, msgr.message.message);
 }
 
+/**
+	Determines if receiver is Receiver 2, still accepting messages, and	has reached
+	its maximum message count to call function which starts termination process.
+*/
 inline void Receiver::doTerminateSelf()
 {
-	if (id == REC2 && isPrinting)
+	if (id == REC2 && isAccepting)
 	{
 		if (isMessageCountMax())
 		{
@@ -255,29 +256,41 @@ inline void Receiver::doTerminateSelf()
 	}
 }
 
+/**
+	Evalulates Receiver 2's message count with maximum message count.
+	@return True if message count has been reached. False if count has not been
+	reached.
+*/
 inline bool Receiver::isMessageCountMax()
 {
 	if (msgCount >= MSG_COUNT_MAX_R2) return true;
 	return false;
 }
 
+/**
+	Function called when Receiver 2 must terminate itself. If still receiving
+	messages either sender, it will send terminating message through specified
+	process according to each sender. Sets isAccepting attribute to false.
+*/
 void Receiver::terminateSelf()
 {
 	if (getFrom25x)
 	{
 		getMessage(S257_POLL);
 		sendMessage(S257_POLL, MSG_TERM);
-		//printf("Sent Sender 257 termination notification to %d.\n", S257_POLL);
 	}
 	if (getFrom997)
 	{
 		sendMessage(REC2_ACK, MSG_TERM); // 17 and Terminating
-		//printf("Sent Sender 997 termination notification to %d.\n", REC2_ACK);
 	}
 
-	isPrinting = false;
+	isAccepting = false;
 }
 
+/**
+	Checks if receiver is Receiver 1 then causes receiver to wait for termination
+	message from Receiver 2 before calling function to remove message queue.
+*/
 void Receiver::doQueueDeallocation()
 {
 	if (id == REC1)
@@ -290,10 +303,13 @@ void Receiver::doQueueDeallocation()
 	{
 		sendMessage(REC2_TERM, "Receiver 2 Terminated!");
 	}
-
-	//while (wait(0) > 0);
 }
 
+/**
+	Calls function to remove any messages left over in message queue. Confirms
+	message queue is empty, then uses system call to deallocate message queue from
+	memory.
+*/
 void Receiver::terminateQueue()
 {
 	cleanUpQueue();
@@ -312,10 +328,13 @@ void Receiver::terminateQueue()
 	}
 }
 
+/**
+	Loops to pop any messages remaining in the message queue. Addition feature which
+	keeps track of message types left in queue. If system works as expected, no messages
+	should not have been left over.
+*/
 void Receiver::cleanUpQueue()
 {
-	//while (wait(0) > 0);
-
 	int leftOverMessages = 0;
 	int leftOver251 = 0;
 	int leftOver257 = 0;
@@ -346,12 +365,20 @@ void Receiver::cleanUpQueue()
 		leftOver251, leftOver257, leftOver997, leftOver997R2);
 }
 
+/**
+	Checks if message queue is currently empty.
+	@return True if called function returns zero. False if it does not return zero.
+*/
 bool Receiver::isQueueEmpty()
 {
 	return messageQueueCount() == 0;
 }
 
-//Handshaking: To sync all processes
+/**
+	Function used to syncronize sender and receiver program starts. If Receiver 1
+	the receiver will wait for message from receiver 2. If Receiver 2 the receiver
+	will wait for initialization messages from all senders.
+*/
 void Receiver::waitForSenders()
 {
 	if (id == REC1)
@@ -369,6 +396,11 @@ void Receiver::waitForSenders()
 	}
 }
 
+/**
+	Second function to syncronize start up. If Receiver 1 then it will send messages
+	to all senders. If Receiver 2 the receiver will send notification to start to
+	Receiver 1.
+*/
 void Receiver::notifyStart()
 {
 	if (id == REC1)
@@ -389,15 +421,22 @@ void Receiver::notifyStart()
 	}
 }
 
+/**
+	Gets the number of message currently inside message queue.
+	@return Integer value which represents the number of messages.
+*/
 int Receiver::messageQueueCount()
 {
 	return msgr.getMessageQueueCount(qid);
 }
 
-// Prints error message when called
-void Receiver::printError(ErrorCode err, int QID, Receiver &r)
+/**
+	Prints error message for each ErrorCode object received.
+	@param err ErrorCode that contains error information.
+	@param QID Integer used to
+*/
+void Receiver::printError(ErrorCode err)
 {
-	// disconnectSender error
 	if (err.errorCode == -9)
 	{
 		printf("Error (%d): disconnectSender method received unexpected srcID: %d\n",
@@ -431,23 +470,20 @@ void Receiver::printError(ErrorCode err, int QID, Receiver &r)
 			(int)err.auxCode);
 	}
 
-	printf("Failed with %d messages in message queue...\n", r.messageQueueCount());
-	//msgctl(QID, IPC_RMID, NULL);
-	r.terminateQueue();
-
-	printf("Press enter to continue... \n\n");
+	printf("Failed with %d messages in message queue...\n", messageQueueCount());
+	terminateQueue();
 }
 
+/**
+	Gets message queue ID from message queue.
+	@param Message queue ID as in integer value.
+*/
 int Receiver::getQID() { return qid; }
 
-// Clears input stream buffer
-void clearCinBuffer()
-{
-	std::cin.clear();
-	std::cin.ignore(INT8_MAX, '\n');
-}
-
-// Prints exit message when called
+/**
+	Prints exit message when called.
+	@param id Receiver's identification number.
+*/
 void printExitMessage(int id)
 {
 	printf("Max Number of Messages inside Queue: %d\n", MAX_QUEUE_COUNT);
@@ -455,7 +491,10 @@ void printExitMessage(int id)
 	printf("Receiver %d has completed... \n", id);
 }
 
-
+/**
+	Program's main point of entry. Instantiates receiver object, initializes, and
+	starts main function. Try-Catch block used to catch errors thrown by process.
+*/
 int main()
 {
 	int QID;
@@ -468,19 +507,9 @@ int main()
 		QID = r.getQID();
 		r.startReceiver();
 	}
-	catch (int qError)
-	{
-		Receiver::printError(qError, QID, r);
-		//return qError;
-	}
-	catch (ErrorCode err)
-	{
-		Receiver::printError(err, QID, r);
-		//return err.errorCode;
-	}
+	catch (ErrorCode err) { r.printError(err); }
+	catch (int err) {	printf("Attention: Something went wrong!!! (%d)\n", err); }
 
-	//clearCinBuffer();
 	printExitMessage(r.getID());
-
 	return 0;
 }

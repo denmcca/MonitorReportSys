@@ -56,7 +56,7 @@ int main() {
 		event = randomDivisorNumber(); // number divisor by 251
 		//usleep(microseconds);
 		string message = to_string(event); //converting number to string
-		cout << "[pid " << getpid() << "] Sending message: " << message << endl << flush;
+		cout << "[pid " << getpid() << "] Sending message: " << message << endl;
 
 		strcpy(msg.message.message, message.c_str()); //converts string to char
 		msg.mType = RECEIVER_ID;
@@ -66,7 +66,7 @@ int main() {
 			cout << "Queue terminated prematurely!" << endl;
 			return -1;
 		}
-		cout << "[pid " << getpid() << "] Message sent to Receiver " << 1 << endl << flush;
+		//cout << "[pid " << getpid() << "] Message sent to Receiver " << 1 << endl << flush;
 	}
   exit(0);
 }
