@@ -6,10 +6,7 @@ Delegations:
 	Dennis receiver 1 and 2</br>
 	Josh sender 257</br>
 	James sender 251</br>
-  
-Discord:
-	https://discord.gg/kpNJ6pN
-
+	
 mType protocol:</br>
 	Sending events</br>
 	251 sending to receiver 1: 1</br>
@@ -26,8 +23,6 @@ mType protocol:</br>
 	receiver 2 ready notification to receiver 1: 11</br>
 	Shutting down</br>
 	receiver 2 to receiver 1 shutdown notification: 12</br>
-
-
 
 Polling Mechanism (only for Sender 257):
 	Sender257 must send a message to the queue before it processes another
