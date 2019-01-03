@@ -1,4 +1,4 @@
-// Dennis McCann
+// denmcca
 // Receiver.h Receiver.cpp MsgPigeon.cpp
 // Contains functions and attributes of MsgPigeon.
 #include <sys/ipc.h>
