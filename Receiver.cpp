@@ -1,4 +1,4 @@
-// Dennis McCann
+// denmcca
 // Receiver.h Receiver.cpp MsgPigeon.cpp
 // Contains bodies of functions for Receiver.
 #include "Receiver.h"
